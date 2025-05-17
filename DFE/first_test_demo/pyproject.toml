@@ -6,9 +6,10 @@ authors = [
     {name = "Trung Thieu Quang",email = "thieuquangtrung1999@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
-    "h5py (>=3.13.0,<4.0.0)"
+    "h5py (>=3.13.0,<4.0.0)",
+    "matplotlib (>=3.10.3,<4.0.0)"
 ]
 
 [tool.poetry]

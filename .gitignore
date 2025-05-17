@@ -1,2 +1,4 @@
 __pycache__/
 .venv/
+saved_images/
+.vscode/
