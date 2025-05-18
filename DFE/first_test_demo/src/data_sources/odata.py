@@ -2,6 +2,7 @@ import requests
 import json
 
 import requests
+import pandas as pd
 
 base_url = "https://services.odata.org/TripPinRESTierService/"
 endpoint = "People"
@@ -25,4 +26,10 @@ with open('./json_files/odata_response.json', 'w') as outfile:
     json.dump(data, outfile)
 
 
-    
+# importing json file to dataframe
+
+# with open('./json_files/odata_response.json', 'r') as openfile:
+#     json_data = json.load(openfile)
+
+df = pd.read_json('./json_files/odata_response.json')
+print(df)
