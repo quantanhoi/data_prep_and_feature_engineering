@@ -5,6 +5,11 @@ import requests
 
 base_url = "https://services.odata.org/TripPinRESTierService/"
 endpoint = "People"
+'''
+$format: returns JSON results.
+$top: limits how many results you get.
+$filter: asks the service for only those people who have at least one trip (any(t: ...)) with a budget greater than 3000.
+'''
 params = {
     '$format': 'json',
     '$top': 2,
@@ -16,7 +21,7 @@ data = response.json()
 
 print(data)
 
-with open('odata_response.json', 'w') as outfile:
+with open('./json_files/odata_response.json', 'w') as outfile:
     json.dump(data, outfile)
 
 
