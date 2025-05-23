@@ -1,0 +1,4 @@
+= Overview
+*Image recognition* is a task where a model identifies objects in an image and assigns labels to them. For example a model can be trained to identify difference between difference between different types of flowers, animal and traffic sign. In this project we will use Tensorflow and Keras to build a simple image recognition model
+
+

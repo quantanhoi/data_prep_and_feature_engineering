@@ -1,88 +1,53 @@
 """
-Thin wrapper that glues data and model together and runs training / evaluation.
+Early-stopping & optional checkpointing.
 """
-import matplotlib.pyplot as plt
+from pathlib import Path
+from typing import Optional, Tuple
 import tensorflow as tf
-
-from . import config as C
-from .data import HorseTruckDataModule
-from .model import CNNHorseTruck
+import config
 
 
 class Trainer:
-    def __init__(self):
-        self.data_module = HorseTruckDataModule()
-        (self.train_ds,
-         self.val_ds,
-         self.test_ds) = self.data_module.load()
+    def __init__(self,
+                 model: tf.keras.Model,
+                 lr: float = config.LEARNING_RATE,
+                 early_stop: int = config.EARLY_STOP,
+                 checkpoint_dir: Optional[Path] = None):
+        self.model = model
+        self.lr = lr
+        self.early_stop = early_stop
+        self.checkpoint_dir = checkpoint_dir
 
-        self.model = CNNHorseTruck.compile_model()
+    # --------------------------------------------------------------  public
+    def fit(self,
+            train_ds: tf.data.Dataset,
+            val_ds: tf.data.Dataset,
+            epochs: int = config.EPOCHS) -> tf.keras.callbacks.History:
+        self._compile()
 
-    # -----------------------------------------------------------------
-    def fit(self):
-        early_stop = tf.keras.callbacks.EarlyStopping(
-            patience=C.EARLY_STOP,
-            restore_best_weights=True
-        )
+        callbacks = [tf.keras.callbacks.EarlyStopping(
+                        monitor="val_loss",
+                        patience=self.early_stop,
+                        restore_best_weights=True)]
+        if self.checkpoint_dir:
+            callbacks.append(
+                tf.keras.callbacks.ModelCheckpoint(
+                    filepath=str(self.checkpoint_dir / "best.h5"),
+                    save_best_only=True,
+                    monitor="val_loss"))
 
-        history = self.model.fit(
-            self.train_ds,
-            validation_data=self.val_ds,
-            epochs=C.EPOCHS,
-            callbacks=[early_stop],
-            verbose=2
-        )
+        return self.model.fit(train_ds,
+                              validation_data=val_ds,
+                              epochs=epochs,
+                              callbacks=callbacks)
 
-        self._plot_learning_curves(history)
+    def evaluate(self,
+                 test_ds: tf.data.Dataset) -> Tuple[float, float]:
+        """Returns (loss, accuracy)."""
+        return self.model.evaluate(test_ds, verbose=0)
 
-    # -----------------------------------------------------------------
-    def evaluate(self):
-        test_loss, test_acc = self.model.evaluate(self.test_ds, verbose=0)
-        print(f"🔎  Test accuracy: {test_acc:0.3f}   |   Test loss: {test_loss:0.4f}")
-
-    # -----------------------------------------------------------------
-    def predict_sample_batch(self, n=9):
-        import numpy as np
-        plt.figure(figsize=(8, 8))
-
-        images, labels = next(iter(self.test_ds))
-        preds = self.model.predict(images, verbose=0).squeeze()
-        preds = (preds > 0.5).astype(int)
-
-        class_names = self.data_module.class_names
-
-        for i in range(n):
-            ax = plt.subplot(3, 3, i + 1)
-            plt.imshow(images[i].numpy().astype("uint8"))
-            true_lbl  = class_names[labels[i]]
-            pred_lbl  = class_names[preds[i]]
-            plt.title(f"Truth: {true_lbl}\nPred : {pred_lbl}",
-                      color="green" if true_lbl == pred_lbl else "red",
-                      fontsize=8)
-            plt.axis("off")
-        plt.tight_layout()
-        plt.show()
-
-    # -----------------------------------------------------------------
-    @staticmethod
-    def _plot_learning_curves(history):
-        import matplotlib.pyplot as plt
-        acc      = history.history["accuracy"]
-        val_acc  = history.history["val_accuracy"]
-        loss     = history.history["loss"]
-        val_loss = history.history["val_loss"]
-        epochs   = range(1, len(acc) + 1)
-
-        plt.figure(figsize=(10, 4))
-        plt.subplot(1, 2, 1)
-        plt.plot(epochs, acc, label="train")
-        plt.plot(epochs, val_acc, label="val")
-        plt.title("Accuracy")
-        plt.legend()
-
-        plt.subplot(1, 2, 2)
-        plt.plot(epochs, loss, label="train")
-        plt.plot(epochs, val_loss, label="val")
-        plt.title("Loss")
-        plt.legend()
-        plt.show()
+    # -------------------------------------------------------------- internal
+    def _compile(self) -> None:
+        self.model.compile(optimizer=tf.keras.optimizers.Adam(self.lr),
+                           loss="binary_crossentropy",
+                           metrics=["accuracy"])
