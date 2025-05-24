@@ -8,6 +8,7 @@ import config
 from data import HorseTruckData
 from model import HorseTruckCNN
 from trainer import Trainer
+import matplotlib.pyplot as plt
 
 
 def main() -> None:
@@ -34,7 +35,7 @@ def main() -> None:
 
 
 def _plot_history(history) -> None:
-    import matplotlib.pyplot as plt
+    
     plt.figure(figsize=(8, 3))
     plt.subplot(1, 2, 1)
     plt.plot(history.history["loss"], label="train")
@@ -48,7 +49,9 @@ def _plot_history(history) -> None:
     plt.title("Accuracy")
     plt.legend()
     plt.tight_layout()
+    plt.savefig("history_panel.png", dpi=300, bbox_inches="tight")
     plt.show()
+    
 
 
 if __name__ == "__main__":

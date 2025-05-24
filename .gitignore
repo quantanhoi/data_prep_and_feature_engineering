@@ -5,3 +5,9 @@ saved_images/
 
 DFE/first_test_demo/src/tensorflow/truck_images/
 DFE/first_test_demo/src/tensorflow/horse_images/
+
+
+DFE/first_test_demo/build/
+DFE/first_test_demo/dtcw
+.gradle/
+DFE/first_test_demo/docToolchainConfig.groovy

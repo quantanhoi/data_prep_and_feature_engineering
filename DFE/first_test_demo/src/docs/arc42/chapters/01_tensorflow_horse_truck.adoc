@@ -1,0 +1,397 @@
+:jbake-title: Introduction and Goals
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 1
+:filename: /chapters/01_introduction_and_goals.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-introduction-and-goals]]
+== Tensorflow Project with Horse - Truck images training
+Trung Thieu Quang <thieuquangtrung1999@gmail.com>
+v0.1, 2025-05-23
+
+A lightweight, self-contained TensorFlow project that distinguishes
+images of horses from trucks.  It demonstrates:
+
+* an object-oriented, modular code base (data → model → training)
+* a custom `tf.data` pipeline that assigns binary labels without
+  changing the on-disk folder structure
+* early stopping and optional checkpointing
+* configuration through a single `config.py` file
+
+NOTE: All source code lives in `src/tensorflow/`.  Activate the Poetry
+environment first: `poetry shell`.
+
+=== Glossary & Concept Guide for the Horse-vs-Truck Project
+This part explains **every technical term and hyper-parameter** that appears in the
+code base (`data.py`, `model.py`, `trainer.py`, `main.py`, `config.py`).
+Read it side-by-side with the source to understand *why* each knob exists and *how*
+it influences the training pipeline.
+
+
+==== 1  Dataset & Input Pipeline
+
+[cols="<2,<5",options="header"]
+|===
+|Term in code |Definition / Purpose
+
+|*dataset* (`tf.data.Dataset`)
+|A *stream* of samples consumed by the model.  
+  Each element is a tuple _(image, label)_.
+
+|*train / val / test split*
+|• **train** – images used to *fit* the weights.  
+ • **val(idation)** – images never shown to the optimiser; used to
+   tune hyper-parameters and to detect over-/under-fitting during
+   training.  
+ • **test** – images held back until the very end to estimate real-world
+   performance.  Never look at it earlier.
+
+|*batch* (`BATCH_SIZE`)
+|Mini-batch of samples processed in one forward / backward pass.
+  Larger = more stable gradients, but more memory.
+
+|*shuffle* (`Dataset.shuffle`)
+|Randomly permutes sample order every epoch so the network
+  cannot memorise the sequence.
+
+|*prefetch*
+|Background thread prepares the next batch while the GPU/CPU
+  trains on the current one → hides I/O latency.
+
+|*cache*
+|Stores decoded tensors in RAM after the first epoch so later
+  epochs load from memory instead of disk.
+
+|*seed* (`SEED`)
+|Fixed integer that initialises all RNGs in the pipeline.
+  Guarantees reproducible shuffling and weight initialisation
+  across runs on the same hardware.
+|===
+
+====  Model Architecture (CNN)
+
+[cols="<2,<5",options="header"]
+|===
+|Layer / Hyper-parameter |Meaning
+
+|`NUM_FILTERS = (32, 64, 128)`
+|Number of convolution filters in each of the three backbone blocks.
+  More filters capture more visual patterns but increase FLOPS.
+
+|`KERNEL_SIZE = 3`
+|Side length of the square convolution kernel (3×3).
+
+|`BatchNormalization`
+|Normalises activations to zero mean / unit variance *per batch*,
+  making optimisation faster and more stable.
+
+|`MaxPooling2D`
+|Reduces spatial resolution by keeping the max value in each 2×2 window.
+  Adds translational invariance and lowers compute cost.
+
+|`DENSE_UNITS = 128`
+|Width of the fully-connected layer after flattening the feature map.
+
+|`DROPOUT = 0.3`
+|Probability of randomly setting a hidden unit to zero during training.
+  Acts as regularisation, combating over-fitting.
+
+|Output `Dense(1, sigmoid)`
+|Single logit squashed to (0, 1).  
+  Values ≥ 0.5 interpreted as *truck*, < 0.5 as *horse*.
+|===
+
+====  Training Loop
+
+[cols="<2,<5",options="header"]
+|===
+|Term / Field |Definition
+
+|*epoch* (`EPOCHS = 30`)
+|One full pass over *all* training batches.
+
+|*learning rate* (`LEARNING_RATE = 1e-3`)
+|Step size for weight updates in the optimiser (Adam).  
+  Too high → diverge; too low → slow convergence.
+
+|*loss* (“binary_crossentropy”)
+|Objective function minimised by the optimiser.  
+  For two classes it measures the negative log-likelihood of the true label.
+
+|*accuracy*
+|Fraction of correct predictions in a batch/epoch.
+
+|*early stopping* (`EARLY_STOP = 5`)
+|Stop training when `val_loss` hasn’t improved for N consecutive epochs.
+  Prevents wasting time once the model starts to over-fit.
+
+|*checkpoint*
+|Snapshot of network weights saved when validation loss reaches a new best.
+  Allows resuming training or deploying the optimal model.
+|===
+
+====  Config File (`config.py`) — all knobs in one place
+
+[cols="<3,<2,<5",options="header"]
+|===
+|Variable |Type |What it controls
+
+|`HORSE_DATA_DIR`, `TRUCK_DATA_DIR`
+|`Path`
+|Root folders that contain the JPEGs (`data/train`, `data/val`, `data/test`).
+
+|`BATCH_SIZE`
+|int
+|Number of images per training step.
+
+|`IMAGE_SIZE`
+|tuple(int,int)
+|Target resolution after `tf.image.resize`.
+
+|`SEED`
+|int
+|Global RNG seed (shuffling, weight init).
+
+|`NUM_FILTERS`, `KERNEL_SIZE`
+|tuple / int
+|Width and kernel size of convolutional layers.
+
+|`DENSE_UNITS`, `DROPOUT`
+|int / float
+|Size of the dense layer and dropout rate.
+
+|`EPOCHS`, `EARLY_STOP`
+|int
+|Max iterations and patience for early-stopping.
+
+|`LEARNING_RATE`
+|float
+|Initial LR for the Adam optimiser.
+|===
+
+====  Metrics Curves Produced by `_plot_history()`
+
+* *loss* – training binary-cross-entropy per epoch  
+* *val_loss* – the same on the validation set  
+* *accuracy* – training accuracy  
+* *val_accuracy* – validation accuracy
+
+Interpretation:
+
+ image::docs/history_panel.png[width=600,align=center]
+
+*Good generalisation* – both curves improve and stay close together.  
+*Over-fitting* – training curves keep improving while validation curves flatten
+or reverse.  
+*Under-fitting* – both curves plateau at a high loss / low accuracy.
+
+====  How the Pieces Fit Together
+
+. **Data loader** (`HorseTruckData.load`) streams images, attaches labels,
+  batches, shuffles and prefetches.
+. **Model** (`HorseTruckCNN.build`) defines the CNN with rescaling,
+  convolutions, dense head and sigmoid output.
+. **Trainer**  
+  .. compiles the model (`loss`, `optimizer`, `metrics`)  
+  .. trains with early-stopping + optional checkpoint  
+  .. evaluates on the unseen *test* set.
+. **Main script** orchestrates the above and optionally plots the metric curves.
+
+You can tweak any hyper-parameter in `config.py`, rerun
+`poetry run python main.py`, and the entire pipeline adapts automatically.
+
+====  Cheat-Sheet of Key Concepts
+
+[horizontal]
+*batch*:: group of samples processed together  
+*epoch*:: one pass over the entire training set  
+*seed*:: deterministic initialisation to ensure reproducibility  
+*learning rate*:: magnitude of each weight update  
+*loss*:: scalar the optimiser minimises  
+*validation*:: data used to tune hyper-parameters, *not* for training  
+*early stopping*:: automatic halt when validation loss stalls  
+*checkpoint*:: saved weights at a validation optimum  
+*dropout*:: randomly zeroes activations to reduce over-fitting  
+*prefetch/cache*:: pipeline ops that hide I/O overhead
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== Code Overview
+
+Belows is the explanation for the coding parts
+
+==== Project layout
+
+[source]
+----
+src/tensorflow/
+ ├── config.py          # hyper-parameters & paths (single source of truth)
+ ├── data.py            # HorseTruckData → three tf.data.Dataset objects
+ ├── model.py           # HorseTruckCNN → small 3-block CNN
+ ├── trainer.py         # Trainer wrapper with early stopping
+ └── main.py            # orchestration script
+----
+
+==== Dataset layout on disk
+
+We keep the original folder hierarchy and attach labels in code:
+
+----
+horse_images/
+└─ data/
+   ├─ train/   *.jpg   ← horse ⇒ label 0
+   ├─ val/     *.jpg
+   └─ test/    *.jpg
+
+truck_images/
+└─ data/
+   ├─ train/   *.jpg   ← truck ⇒ label 1
+   ├─ val/     *.jpg
+   └─ test/    *.jpg
+----
+
+No sub-folders per class are required; `data.py` assigns the constant label
+during streaming.
+
+==== Configuration (`config.py`)
+
+[cols="<2,<4",options="header"]
+|===
+|Field |Meaning
+
+|`HORSE_DATA_DIR` `TRUCK_DATA_DIR`
+|Root folders (point at the _data_ sub-folder inside each class).
+
+|`BATCH_SIZE`     |Mini-batch size for all splits.
+|`IMAGE_SIZE`     |Target height × width after resize.
+|`SEED`           |Random seed for shuffling/reproducibility.
+
+|`NUM_FILTERS`    |Tuple of filter counts per Conv block.
+|`KERNEL_SIZE`    |Side length of square kernels.
+|`DENSE_UNITS`    |Width of the dense layer after the CNN backbone.
+|`DROPOUT`        |Dropout rate before the output layer.
+
+|`EPOCHS`         |Maximum number of epochs.
+|`EARLY_STOP`     |Stop if *validation* loss hasn’t improved for N epochs.
+|`LEARNING_RATE`  |Initial learning-rate for Adam.
+|===
+
+==== Data pipeline (`data.py`)
+
+[source,python]
+----
+class HorseTruckData:
+    def load() -> (train, val, test):
+        train = _from_roots(horse/train, truck/train, shuffle=True)
+        ...
+    def _from_roots(horse_dir, truck_dir):
+        horse_ds = _one_class_ds(horse_dir, label=0)
+        truck_ds = _one_class_ds(truck_dir, label=1)
+        return (horse_ds + truck_ds).shuffle().cache().prefetch()
+----
+* `_one_class_ds` lists `*.jpg`, decodes, rescales to `[0,1]`,
+  and attaches a constant label.
+* All three splits are returned as ready-to-use `tf.data.Dataset` objects.
+
+==== Model architecture (`model.py`)
+
+[graphviz]
+----
+digraph CNN {
+  rankdir=LR
+  input [label="180×180×3\nInput"];
+  rs     [label="Rescaling\n/255"];
+  conv1  [label="Conv2D 32\nBN+ReLU\nMaxPool"];
+  conv2  [label="Conv2D 64\nBN+ReLU\nMaxPool"];
+  conv3  [label="Conv2D 128\nBN+ReLU\nMaxPool"];
+  flat   [label="Flatten"];
+  dense  [label="Dense 128\nBN+ReLU\nDropout 0.3"];
+  out    [label="Dense 1\nSigmoid"];
+
+  input->rs->conv1->conv2->conv3->flat->dense->out;
+}
+----
+The final sigmoid outputs a probability ∈ [0,1]; threshold 0.5 ⇒ truck.
+
+==== Training loop (`trainer.py` + `main.py`)
+
+* Adam(learning-rate =`config.LEARNING_RATE`)
+* Binary-cross-entropy loss
+* EarlyStopping(patience =`EARLY_STOP`, restore_best_weights = True)
+* Optional checkpoint to `./checkpoints/best.h5`
+
+Run:
+
+----
+poetry run python main.py
+----
+
+At the end you’ll see a two-panel plot and a console line like:
+
+----
+✅  Test accuracy ~ 0.68
+----
+
+==== Interpreting the history plot
+
+image::history_panel.png[align=center,width=600]
+
+[cols="1,5",options="header"]
+|===
+|Curve |What it means
+
+|`loss`
+|Binary-cross-entropy averaged over the *training* mini-batches of the current epoch.
+
+|`val_loss`
+|Same metric, but computed on the **validation** set (data never
+seen by the optimizer).
+
+|`accuracy`
+|Percentage of correct predictions on training mini-batches.
+
+|`val_accuracy`
+|Accuracy on the validation set.
+|===
+
+Desirable pattern:
+
+* Both _loss_ curves decrease; both _accuracy_ curves increase.
+* `val_*` closely tracks `train_*` with a small gap.
+* Early-stopping halts training once `val_loss` hasn’t improved for
+  `EARLY_STOP` epochs → prevents over-fitting.
+
+Troubleshooting cheatsheet:
+
+[cols="<2,<4"]
+|===
+|Symptom |Typical fix
+
+|`train_loss` ↓ but `val_loss` ↑
+|More dropout / L2, data augmentation, or stop earlier.
+
+|Both losses high and parallel
+|Model under-capacity → raise `NUM_FILTERS` or `DENSE_UNITS`.
+
+|Training noisy
+|Lower `LEARNING_RATE` or increase `BATCH_SIZE`.
+|===
+
+
