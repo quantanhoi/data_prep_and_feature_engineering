@@ -47,13 +47,13 @@ endif::arc42help[]
 // 1. Introduction and Goals
 include::chapters/01_tensorflow_horse_truck.adoc[]
 
-// <<<<
-// // 2. Architecture Constraints
-// include::chapters/02_architecture_constraints.adoc[]
+<<<<
+// 2. Architecture Constraints
+include::chapters/02_data_sources.adoc[]
 
-// <<<<
-// // 3. Context and Scope
-// include::chapters/03_context_and_scope.adoc[]
+<<<<
+// 3. Context and Scope
+include::chapters/03_scaling_numerical.adoc[]
 
 // <<<<
 // // 4. Solution Strategy

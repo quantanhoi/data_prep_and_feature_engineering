@@ -17,7 +17,7 @@ HDF5 is a popular file format designed to store large amounts of numerical data 
 os.makedirs('saved_images', exist_ok=True)
 
 with h5py.File('mnist.hdf5', 'r') as f:
-    # Convert the keys to a list
+    # Convert the keys to a list so we can assign them later
     hdf5_keys = list(f.keys())
     print("Datasets in the file:", hdf5_keys)
     
@@ -34,12 +34,19 @@ print("all_images shape:", all_images.shape)
 print("all_labels shape:", all_labels.shape)
 
 # For example, now you can iterate through all_images in memory:
-for i in range(len(all_images)):
+range_n = 10
+for i in range(range_n):    # or iterate through all with range(len(all_images))
     img = all_images[i]
     label = all_labels[i]
     
     # OPTIONAL: save each image as a PNG for later viewing
-    plt.imsave(f"saved_images/image_{i}_label_{label}.png", img, cmap='gray')
+    # plt.imsave(f"saved_images/image_{i}_label_{label}.png", img, cmap='gray')
+    plt.figure(figsize=(2, 2))
+    plt.imshow(img, cmap='gray')
+    plt.title(f"Label: {label}", fontsize=14)
+    plt.axis('off')           # hide the X/Y axis ticks
+    plt.show()
+
 
 
 

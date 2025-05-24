@@ -1,4 +1,4 @@
-:jbake-title: Introduction and Goals
+:jbake-title: Tensorflow Project with Horse - Truck training
 :jbake-type: page_toc
 :jbake-status: published
 :jbake-menu: arc42

@@ -1,0 +1,155 @@
+:jbake-title: Data Sources
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 2
+:filename: /chapters/02_data_sources.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-architecture-constraints]]
+== Data Sources
+
+This page summarises the key ideas from the four slide decks
+(“Data Sources”, “Scaling & Normalising”, “Categorical Encoding”, “Feature Cross”)
+and explains the three companion Python modules (api_test.py, odata.py, hdf5_test.py).
+Everything is written for Python ≥ 3.9 and the typical scientific stack
+(pandas, NumPy, scikit-learn, TensorFlow).
+
+=== Flat files, databases & hierarchical stores
+
+* CSV / Excel / Parquet – one-line pd.read_* calls.
+* RDBMS – create a connection (SQLAlchemy, psycopg2, …) and feed the result set to pd.read_sql_query.
+* HDF5: is a popular file format designed to store large amounts of numerical data in a way that is both hierarchical and efficient. You can think an HDF5 file like a file system with in a file. There are "groups" and "dataset", this structure allows you to
+** organize data in a logical hierarchy
+** read or write only the required data subset, instead of loading everything into the memory
+** easily handle large, multidimensional arrays that may not fit into RAM
+** attach meta data to each dataset for self-describing files
+
+
+==== Code Walkthrough
+[source, python]
+----
+# Create a directory to store output images, if you want to save image files
+os.makedirs('saved_images', exist_ok=True)
+
+with h5py.File('mnist.hdf5', 'r') as f:
+    # Convert the keys to a list so we can assign them later
+    hdf5_keys = list(f.keys())
+    print("Datasets in the file:", hdf5_keys)
+    
+    # Get references to the dataset objects
+    images = f[hdf5_keys[0]]
+    labels = f[hdf5_keys[1]]
+    
+    # Read *all* images into memory as a NumPy array
+    all_images = images[:]       # or images[()] is also fine
+    all_labels = labels[:]
+    
+print("all_images type:", type(all_images))
+print("all_images shape:", all_images.shape)
+print("all_labels shape:", all_labels.shape)
+
+# For example, now you can iterate through all_images in memory:
+range_n = 10
+for i in range(range_n):    # or iterate through all with range(len(all_images))
+    img = all_images[i]
+    label = all_labels[i]
+    # OPTIONAL: save each image as a PNG for later viewing
+    # plt.imsave(f"saved_images/image_{i}_label_{label}.png", img, cmap='gray')
+    plt.figure(figsize=(2, 2))
+    plt.imshow(img, cmap='gray')
+    plt.title(f"Label: {label}", fontsize=14)
+    plt.axis('off')           # hide the X/Y axis ticks
+    plt.show()
+----
+
+
+=== Rest API
+A REST API (Representational State Transfer API) is a type of API that uses the HTTP protocol to enable communication between different systems over a network. It follows the principles of REST, a software architectural style, and offers a simple and uniform way to interact with data and resources.
+
+.Key features of REST APIs: 
+
+* HTTP-based: REST APIs utilize HTTP methods (GET, POST, PUT, DELETE) to perform actions on resources, aligning with the CRUD (Create, Read, Update, Delete) operations
+* Stateless: Each request from the client to the server must contain all the information needed to fulfill the request, and no session state is stored on the server. 
+* Client-Server Architecture: The client and server operate independently, allowing for scalability and flexibility. 
+* Uniform Interface: REST APIs provide a consistent interface for interacting with resources, making them easier to understand and use. 
+
+
+==== Code Walkthrough
+[source, python]
+----
+import requests
+import json
+
+
+#converting response to json
+response = requests.get('https://petstore.swagger.io/v2/pet/findByStatus?status=sold').json()
+# print(response)
+
+# Writing JSON to a file in Python using json.dump() 
+with open('./json_files/petstore_response.json', 'w') as outfile:    #'w' for writing
+    json.dump(response, outfile)
+    
+    
+# Reading JSON from a file using json.load()
+with open('./json_files/petstore_response.json', 'r') as openfile:   #'r' for reading
+    json_object = json.load(openfile)
+    
+print(json_object)
+
+----
+
+
+
+=== Odata - "The best way to rest"
+What it is:: OData (Open Data Protocol) is an OASIS-standard REST flavour designed for business data. In addition to the usual HTTP verbs (GET, POST, PATCH, DELETE) it specifies
+
+* a machine-readable model ($metadata) that fully describes every entity, key and relationship;
+* powerful URL query options ($select, $filter, $expand, $top, $orderby …) so the server does the heavy work and the client pulls back only the rows and columns it needs;
+* consistent, idiomatic JSON payloads (or Atom/XML if you must), which most BI tools and libraries can ingest without custom parsers.
+Typical use cases: self-service analytics, SAP / Dynamics / Salesforce integrations, mobile apps that need server-side paging and filtering.
+
+Typical use cases: self-service analytics, SAP / Dynamics / Salesforce integrations, mobile apps that need server-side paging and filtering.
+
+==== Code Walkthrough
+[source, python]
+----
+import requests
+import json
+
+import requests
+import pandas as pd
+
+base_url = "https://services.odata.org/TripPinRESTierService/"
+endpoint = "People"
+'''
+$format: returns JSON results.
+$top: limits how many results you get.
+$filter: asks the service for only those people who have at least one trip (any(t: ...)) with a budget greater than 3000.
+'''
+params = {
+    '$format': 'json',
+    '$top': 2,
+    '$filter': "Trips/any(t: t/Budget gt 3000)"
+}
+
+response = requests.get(base_url + endpoint, params=params)
+data = response.json()
+
+print(data)
+
+with open('./json_files/odata_response.json', 'w') as outfile:
+    json.dump(data, outfile)
+
+
+# importing json file to dataframe
+# with open('./json_files/odata_response.json', 'r') as openfile:
+#     json_data = json.load(openfile)
+
+df = pd.read_json('./json_files/odata_response.json')
+print(df)
+----

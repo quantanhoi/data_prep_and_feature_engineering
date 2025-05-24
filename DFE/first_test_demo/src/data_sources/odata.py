@@ -27,7 +27,6 @@ with open('./json_files/odata_response.json', 'w') as outfile:
 
 
 # importing json file to dataframe
-
 # with open('./json_files/odata_response.json', 'r') as openfile:
 #     json_data = json.load(openfile)
 

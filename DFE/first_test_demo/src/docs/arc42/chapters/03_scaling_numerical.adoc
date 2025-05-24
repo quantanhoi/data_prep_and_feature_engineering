@@ -1,0 +1,41 @@
+:jbake-title: Scaling Numerical
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 3
+:filename: /chapters/03_scaling_numerical.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-context-and-scope]]
+== Scaling Numerical
+This document defines and illustrates concepts around Scaling and Normalizing. Use it as a quick reference when preparing numeric data for machine-learning pipelines.
+
+.Why Scale? Machine-learning optimizer behave best when every input feature has roughly the same dynamic range.
+Unscaled data can lead to: 
+
+* divergent or sluggish gradient descent.
+* domination of distance metrics by large-magnitude features
+* ppor floating-point precision
+
+Most scaling method aim to map feature around *[-1 , 1]*, or to a zero-mean/unit-variance bell shape
+
+=== Linear Scaling Methods
+
+==== Min-Max Scaling
+[source,python]
+----
+x_scaled = (2*x - x_max - x_min)/(x_max - x_min) # maps to [-1, 1]
+----
+
+pros:: deterministic bounds, simple inverse transform.
+cons:: extremely sensitive to outliers because *x_min/x_max* might be rare anomalies.
+
+
+==== Clipping + Min-Max
+
+* *np.clip(x, lo, hi)* caps insane values.
+* Run classic min-max on the clipped data. You keep genuine outliers (they become -1 or +1) while protecting the bulk of the distribution from compression. NOTE: this is *not* the same as *MinMaxScaler(clip=True)* in scikit-learn, which only clips after scaling.
