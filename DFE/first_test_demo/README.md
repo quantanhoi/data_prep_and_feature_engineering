@@ -4,3 +4,4 @@ source /home/trungthieu/.cache/pypoetry/virtualenvs/first-test-demo-hQf9xYdT-py3
 poetry shell
 source .venv/bin/activate
 
+sudo ./dtcw publishToConfluence -PconfluenceUser=thieuquangtrung1999@gmail.com -PconfluencePass=<apikey>
