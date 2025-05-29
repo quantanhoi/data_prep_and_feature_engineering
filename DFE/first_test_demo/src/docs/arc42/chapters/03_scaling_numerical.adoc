@@ -14,6 +14,43 @@ ifndef::imagesdir[:imagesdir: ../../images]
 == Scaling Numerical
 This document defines and illustrates concepts around Scaling and Normalizing. Use it as a quick reference when preparing numeric data for machine-learning pipelines.
 
+.Categorical Data and Numerical Data
+There are two types of data
+
+Categorical Data:: Data that reflect qualitative characteristics
+* Gender
+* Hair Color
+* Ethnicity
+utilising categorical data is essentially a way of assigning number values to inherently qualitative data. For example you can assign Female to 1 and Male to 2
+Numerical Data:: Data that are natureally numbers-based, for example age, height and weight....
+
+Within each of these main data types , there are 2 level of measurement
+
+.For categorical data it is
+
+Nominal Data:: Pure identifier, swapping two labels never changes meaning
+* *Valid operations -* = ≠, counting frequencies, one‐hot/dummy/feature-hash encodings.
+* *Invalid operations –* <, >, +, −, computing mean or standard deviation.
+* *Example*: Eye Colour: brown, blue ,green or Country Code DE, FR, US
+Ordinal Data:: * Categories imply rank, but the gap between successive ranks is unknown or unequal.
+* *Valid operations –* =, ≠, <, >, non-parametric statistics (median, Spearman ρ, Kendall τ).
+* *Invalid operations –* Adding / subtracting ranks as if they were numeric distances (unless you trust equal spacing).
+* *Example*: high-school < bachelor < master < PhD or strongly disagree (1) … strongly agree (5)
+
+.For numerical data it is 
+Interval:: Numeric values are ordered and evenly spaced.
+* Zero is arbitrary: it does not mean “none of the quantity.”
+* Because zero is arbitrary, ratios are meaningless; you may add or subtract, but not multiply or divide and still retain semantic truth.
+* *Example*:  
+** Temperature in °C or °F (0 °C is not “no temperature”).
+**  Calendar dates measured as “years” (the year 0 is a convention).
+** Standardised test scores (e.g., GMAT 200-800).
+Ratio data:: Ordered, evenly spaced and the scale has an absolute, natural zero that truly represents “absence.”
+* All arithmetic operations—including multiplication, division, percentage change—retain meaning.
+* *Example*: 
+** Height, weight, length, price, age, count, elapsed time, Kelvin temperature.
+** Sensor readings such as luminosity in lux, sound pressure in pascals, CPU cycles.
+
 .Why Scale? Machine-learning optimizer behave best when every input feature has roughly the same dynamic range.
 Unscaled data can lead to: 
 
