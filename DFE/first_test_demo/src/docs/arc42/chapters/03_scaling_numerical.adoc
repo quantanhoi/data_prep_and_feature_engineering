@@ -34,6 +34,51 @@ x_scaled = (2*x - x_max - x_min)/(x_max - x_min) # maps to [-1, 1]
 pros:: deterministic bounds, simple inverse transform.
 cons:: extremely sensitive to outliers because *x_min/x_max* might be rare anomalies.
 
+.Task Overview
+[source, python]
+----
+'''
+Your task: 
+    - Open the starter notebook and load housing data
+    - Apply a min max scaler to the column total_rooms
+    - Verify the transformed column is in range [-1,1]
+'''
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+
+# -------------------------------------------------------------
+# 1. read the file
+# -------------------------------------------------------------
+df = pd.read_csv("housing.csv")
+
+# -------------------------------------------------------------
+# 2. scale `total_rooms`
+# -------------------------------------------------------------
+scaler = MinMaxScaler(feature_range=(-1, 1))
+df["total_rooms_scaled"] = scaler.fit_transform(df[["total_rooms"]])
+
+#Verify max and min total_room
+max_rooms = df["total_rooms"].max()
+min_rooms = df["total_rooms"].min()
+print("max total rooms: " + str(max_rooms))
+print("min total rooms: " + str(min_rooms))
+
+# -------------------------------------------------------------
+# 3. write the result
+# -------------------------------------------------------------
+df.to_csv("housing_scaled.csv", index=False)   # <- new file with the extra column
+print("✅  new file written: housing_scaled.csv")
+----
+
+With the result output, we can determine the maximum and minimum total_rooms
+max total rooms:: 39320.0
+min total rooms:: 2.0
+
+Taking a random total_rooms of *880.0*
+----
+x_scaled = (2*880 - 39320 - 2 ) / (32320 - 2) = -0.95553385
+----
+Which is a correct scaled number in range [-1, 1]
 
 ==== Clipping + Min-Max
 
