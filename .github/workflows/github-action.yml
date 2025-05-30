@@ -1,0 +1,29 @@
+name: Publish Documentation to Confluence
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    types: [ closed ]
+
+jobs:
+  publish-to-confluence:
+    runs-on: ubuntu-latest
+    name: Build and Publish Documentation
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Make dtcw script executable
+      run: chmod +x ./dtcw
+      
+    - name: Publish to Confluence
+      run: |
+        sudo ./dtcw publishToConfluence \
+          -PconfluenceUser="${{ secrets.CONFLUENCE_USER }}" \
+          -PconfluencePass="${{ secrets.CONFLUENCE_API_TOKEN }}"
+      env:
+        CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+        CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
