@@ -11,5 +11,6 @@ src/tensorflow/horse_images/
 build/
 dtcw
 .gradle/
-.DS_Store
 
+
+DS_Store
