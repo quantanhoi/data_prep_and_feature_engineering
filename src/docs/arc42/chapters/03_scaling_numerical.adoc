@@ -172,3 +172,94 @@ This technique is particularly useful when:
 
 .Conclusion
 Clipping with Min-Max scaling provides a robust approach to feature scaling when dealing with outliers. By setting reasonable bounds before scaling, we ensure that extreme values don't compress the majority of our data into a small range, while still maintaining the desired output range of [-1, 1].
+
+
+
+
+
+
+==== Z-Score Normalization
+Z-score normalization, also known as standardization or standard scaling, is a fundamental data preprocessing technique in machine learning and statistics. It transforms data to have a mean of zero and a standard deviation of one, making different features comparable regardless of their original scales.
+
+.What is Z-Score Normalization?
+
+Z-score normalization is a scaling technique that transforms each data point by subtracting the mean and dividing by the standard deviation. This process centers the data around zero and scales it based on the data's spread.
+
+
+.The Z-Score Formula
+
+The mathematical formula for Z-score normalization is:
+
+[source,text]
+----
+z = (x - μ) / σ
+
+Where:
+- z = standardized value (Z-score)
+- x = original value
+- μ = mean of the dataset
+- σ = standard deviation of the dataset
+----
+
+
+.Key Properties
+
+After Z-score normalization:
+
+* **Mean = 0**: The transformed data is centered at zero
+* **Standard Deviation = 1**: The data has unit variance
+* **Range**: Typically between -3 and +3, but theoretically unbounded
+* **Distribution shape**: Preserved from the original data
+
+
+.Step-by-Step Process
+
+1. **Calculate the mean** of the dataset
+2. **Calculate the standard deviation** of the dataset
+3. **For each data point**, subtract the mean and divide by the standard deviation
+
+.Visual Interpretation
+
+* **Positive Z-scores**: Values above the mean
+* **Negative Z-scores**: Values below the mean
+* **Magnitude**: Indicates how many standard deviations away from the mean
+image:z_score_housing.png[]
+
+
+Advantages of Z-Score Normalization::
+1. **Scale Independence**: Makes features with different units comparable
+2. **Outlier Identification**: Values beyond ±3 standard deviations are easily identified as outliers
+3. **Algorithm Performance**: Many ML algorithms perform better with standardized features
+4. **Statistical Properties**: Preserves the shape of the original distribution
+5. **Interpretability**: Z-scores have a clear statistical meaning
+
+Disadvantages and Limitations::
+1. **Unbounded Range**: Unlike min-max scaling, Z-scores are not bounded to a specific range
+2. **Assumes Normal Distribution**: Works best when data is approximately normally distributed
+3. **Sensitive to Outliers**: Extreme outliers can affect the mean and standard deviation
+4. **Not Suitable for All Algorithms**: Some algorithms prefer bounded inputs (e.g., neural networks with sigmoid activation)
+
+
+
+.When to Use Z-Score Normalization
+
+Z-score normalization is particularly effective when:
+
+* Working with algorithms that assume normally distributed data (e.g., Linear Regression, Logistic Regression)
+* Features have different units or scales
+* You need to identify outliers based on statistical thresholds
+* Using distance-based algorithms (e.g., k-NN, k-Means, SVM)
+* The data approximately follows a normal distribution
+
+
+
+.Conclusion
+
+Z-score normalization is a powerful preprocessing technique that standardizes features to have zero mean and unit variance. It's particularly valuable for:
+
+* Making features with different scales comparable
+* Improving the performance of many machine learning algorithms
+* Identifying statistical outliers
+* Ensuring numerical stability in optimization algorithms
+
+While it has limitations (unbounded range, sensitivity to outliers), Z-score normalization remains one of the most widely used and effective scaling techniques in data science and machine learning.
