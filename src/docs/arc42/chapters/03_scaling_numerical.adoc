@@ -118,6 +118,57 @@ x_scaled = (2*880 - 39320 - 2 ) / (32320 - 2) = -0.95553385
 Which is a correct scaled number in range [-1, 1]
 
 ==== Clipping + Min-Max
+Clipping with Min-Max scaling is a data preprocessing technique that combines outlier handling with feature scaling. This approach addresses the limitations of standard Min-Max scaling when dealing with datasets containing extreme values or outliers.
 
+.Clipping (Clamping)
+Clipping, also known as clamping, is the process of limiting values to a specific range by setting a minimum and maxium threshold. Unlike wrapping, clipping moves values outside the range to the nearest boundary value
+[source,text]
+----
+Original value: 150
+Clipping range: [0, 100]
+Clipped value: 100
+
+Original value: -20
+Clipping range: [0, 100]
+Clipped value: 0
+----
+.Min-Max Scaling (mentioned in last section)
+Min-Max scaling is a normalization technique that transforms features to a fixed range, typically [0, 1] or [-1, 1].
+
+.The two-step process 
+The clipping with Min-Max scaling approach involves:
+
+1. **First**: Clip the data using reasonable bounds (not the actual min/max)
+2. **Then**: Apply Min-Max scaling to transform the clipped data to [-1, 1]
+
+This differs from `sklearn.preprocessing.MinMaxScaler(clip=True)`, which scales first and then clips.
+
+.How it works
 * *np.clip(x, lo, hi)* caps insane values.
 * Run classic min-max on the clipped data. You keep genuine outliers (they become -1 or +1) while protecting the bulk of the distribution from compression. NOTE: this is *not* the same as *MinMaxScaler(clip=True)* in scikit-learn, which only clips after scaling.
+image:clipping_min_max.png[]
+
+
+
+Advantages::
+1. **Outlier Handling**: Extreme values are treated as boundary cases rather than dominating the scaling
+2. **Preserves Data Distribution**: The majority of the data maintains its relative relationships
+3. **Bounded Output**: Guarantees all values fall within [-1, 1] range
+4. **Robustness**: Less sensitive to extreme outliers compared to standard Min-Max scaling
+Disadvantages::
+1. **Information Loss**: Outliers lose their relative magnitude
+2. **Parameter Selection**: Requires choosing appropriate clipping bounds
+3. **Domain Knowledge**: May need understanding of what constitutes "reasonable" values
+
+.When to use?
+This technique is particularly useful when:
+
+* Your dataset contains outliers that shouldn't dominate the scaling
+* You need values strictly bounded to a specific range
+* The outliers represent valid but extreme cases (not errors)
+* You're working with algorithms sensitive to feature scales (e.g., neural networks, SVM)
+
+
+
+.Conclusion
+Clipping with Min-Max scaling provides a robust approach to feature scaling when dealing with outliers. By setting reasonable bounds before scaling, we ensure that extreme values don't compress the majority of our data into a small range, while still maintaining the desired output range of [-1, 1].

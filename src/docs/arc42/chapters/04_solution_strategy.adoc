@@ -14,6 +14,6 @@ ifndef::imagesdir[:imagesdir: ../../images]
 == Solution Strategy
 
 
-ifdef::arc42help[]
+=== Z-Score normalization (standardization)
 
-endif::arc42help[]
+=== Linear Regression
