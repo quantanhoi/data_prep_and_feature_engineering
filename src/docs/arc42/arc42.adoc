@@ -57,7 +57,7 @@ include::chapters/03_scaling_numerical.adoc[]
 
 // <<<<
 // // 4. Solution Strategy
-// include::chapters/04_solution_strategy.adoc[]
+include::chapters/04_categorical.adoc[]
 
 // <<<<
 // // 5. Building Block View

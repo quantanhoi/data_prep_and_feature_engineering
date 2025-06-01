@@ -1,0 +1,54 @@
+:jbake-title: Categorical Variable
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 4
+:filename: /chapters/04_categorical.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-solution-strategy]]
+== Categorical Variable
+Categorical variables describe qualitative phenomena - they represent characteristics, qualities, or group memberships rather than measurable quantities. This is the fundamental distinction from quantitative variables.
+
+Quantitative Variables::
+Quantitative Variables measure amounts
+- Stock price: $145.32
+- Temperature: 25°C
+- Height: 175 cm
+- Age: 32 years
+
+Categorical Variables::
+- Industry sector: "Technology", "Healthcare", "Finance"
+- Customer satisfaction: "Poor", "Good", "Excellent"
+- Country of origin: "USA", "Germany", "Japan"
+
+
+.Type of Categorical Variables
+1. Ordered (Ordinal) Categories - have a meaningful sequence:
+- Education level: "High School" < "Bachelor's" < "Master's" < "PhD"
+- Customer rating: "Poor" < "Fair" < "Good" < "Excellent"
+- T-shirt sizes: "Small" < "Medium" < "Large" < "X-Large"
+
+2. Unordered (Nominal) Categories - no inherent order:
+- Cuisine type: "French", "Indian", "American", "Italian"
+- Blood type: "A", "B", "AB", "O"
+- Car manufacturer: "Toyota", "Ford", "BMW"
+
+
+.Numbers can be categorical
+Categorical variables are independent from data type - even numerical values can represent categories when they don't have mathematical meaning.
+
+Example:
+**Postal Codes:** "64295" (Darmstadt) and "55118" (Mainz)
+(Darmstadt is not 9177 better than Mainz)
+These numbers are just labels; mathematical operations don't make sense
+
+**Other Numerical Categories:**
+- Employee ID: 10234, 10235, 10236 (not meaningful to add or average)
+- Product codes: 1001, 2005, 3010
+- Phone area codes: 212, 415, 617
+- Jersey numbers in sports: 23, 45, 99
