@@ -48,7 +48,17 @@ Example:
 These numbers are just labels; mathematical operations don't make sense
 
 **Other Numerical Categories:**
+
 - Employee ID: 10234, 10235, 10236 (not meaningful to add or average)
 - Product codes: 1001, 2005, 3010
 - Phone area codes: 212, 415, 617
 - Jersey numbers in sports: 23, 45, 99
+
+
+.Machine Learning models for categorical data
+- Decision trees can use categorical values as cut-offs
+- CatBoost got its name from efficiently dealing with categorical variables
+- Naive Bayes models work with contingency tables based on categorical values
+**However** most models expect numerical data
+
+=== One Hot Encoding
