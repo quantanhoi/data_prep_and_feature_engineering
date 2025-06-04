@@ -267,7 +267,7 @@ While it has limitations (unbounded range, sensitivity to outliers), Z-score nor
 
 
 ==== Winsorizing
-Winsorizing is a statistical technique used to handle outliers in datasets by replacing extreme values with less extreme values at specified percentiles. Named after biostatistician Charles P. Winsor, this method provides a robust alternative to simply removing outliers, preserving the sample size while reducing the impact of extreme observations.
+Winsorizing is a statistical technique used to handle outliers in datasets by replacing extreme values with less extreme values at specified percentiles. Named after biostatistician Charles P. Winsor, this method provides a robust alternative to **simply removing outliers**, preserving the sample size while reducing the impact of extreme observations.
 
 The process of limiting extreme values in statistical data by replacing outliers with values at specified percentiles. Unlike trimming, winsorizing preserves all data points by transforming rather than removing them.
 
@@ -277,6 +277,7 @@ Statistical measures that divide a dataset into 100 equal parts. For example:
 - **5th percentile**: The value below which 5% of the data falls
 - **95th percentile**: The value below which 95% of the data falls
 
+image:winsorized.png[]
 
 .Outliers
 Data points that are significantly different from other observations in the dataset. These can be:
@@ -304,6 +305,8 @@ The threshold values (typically percentiles) used to determine which observation
    - Values below the lower bound → Set to lower bound value
    - Values above the upper bound → Set to upper bound value
 4. **Preserve Sample Size**: All original data points remain, but extreme values are "pulled in"
+
+image:winsorizing.png[]
 
 
 
