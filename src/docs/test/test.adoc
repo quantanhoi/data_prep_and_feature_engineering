@@ -1,0 +1,7 @@
+= Testing Page
+
+This is a test page for stand-alone adoc file
+
+== test page 1
+
+== test page 2

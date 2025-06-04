@@ -26,6 +26,7 @@ inputFiles = [
         //[file: 'doctoolchain_demo.adoc',       formats: ['html','pdf']],
         //[file: 'arc42-template.adoc',    formats: ['html','pdf']],
 	[file: 'arc42/arc42.adoc', formats: ['html','pdf']],
+    [file: 'test/test.adoc', formats: ['html', 'pdf']]
 	/** inputFiles **/
 ]
 
@@ -250,8 +251,11 @@ only 'file' or 'url' is allowed. If both are given, 'url' is ignored
 confluence.with {
     input = [
             [ file: "build/html5/arc42/arc42.html",
-             ancestorName: "Data Prep and Feature Engineering"
-             ],
+            ancestorName: "Data Prep and Feature Engineering"
+            ],
+            [ file: "build/html5/test/test.html",
+            ancestorName: "Doc Toolchain"
+            ],
     ]
 
     // endpoint of the confluenceAPI (REST) to be used
