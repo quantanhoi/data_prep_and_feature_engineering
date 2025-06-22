@@ -62,3 +62,151 @@ These numbers are just labels; mathematical operations don't make sense
 **However** most models expect numerical data
 
 === One Hot Encoding
+
+Why One Hot Encoding improves machine learning performance:
+One-hot encoding is a crucial step in data preparation for machine learning algorithms. It involves converting categorical data into a numerical format that algorithms can understand. This transformation is essential because most machine learning models require numerical input to perform calculations and make predictions.
+
+.One-hot encoding for categorical variables
+Categorical data, by its nature, cannot be directly used by machine learning algorithms. These algorithms are designed to work with numerical data, and categorical variables need to be transformed into a format that these algorithms can process. Assigning arbitrary numerical values to to categorical data can lead to incorrect interpretations by the algorithm, as these values may imply a false order or hierarchy among the categories.  For instance, if we assign the values 0, 1, and 2 to the categories "UK", "French", and "US", respectively, the algorithm may incorrectly assume that "US" is twice as significant as "UK" or that "French" is midway between "UK" and "US".
+
+.How it works
+For each unique category in the original variable:
+1. Create a new binary column
+2. Set value to 1 where that category is present
+3. Set value to 0 where that category is absent
+
+[source,python]
+----
+# Example transformation
+Original:          One-Hot Encoded:
+City               DA  FFM  MZ
+----               -------------
+DA        →        1   0    0
+FFM       →        0   1    0
+MZ        →        0   0    1
+DA        →        1   0    0
+----
+
+Each category gets its own column, and the presence of that category is indicated by a 1, while absence is indicated by a 0. This allows machine learning algorithms to treat each category independently without implying any order or hierarchy.
+
+.Implementation in python using sklearn
+[source,python]
+----
+from sklearn.preprocessing import OneHotEncoder
+import pandas as pd
+
+# Create sample data
+data = pd.DataFrame({
+    'city': ['New York', 'London', 'Paris', 'New York', 'London']
+})
+
+# Initialize encoder
+encoder = OneHotEncoder(sparse_output=False)
+
+# Fit and transform
+encoded = encoder.fit_transform(data[['city']])
+
+# Get feature names
+feature_names = encoder.get_feature_names_out(['city'])
+encoded_df = pd.DataFrame(encoded, columns=feature_names)
+----
+
+.Using pandas get_dummies
+[source,python]
+----
+# Simple one-hot encoding with pandas
+encoded = pd.get_dummies(data, columns=['city'])
+
+# With prefix
+encoded = pd.get_dummies(data, columns=['city'], prefix='city')
+----
+
+
+.Advantages of One-Hot Encoding
+
+1. Prevents models from assuming false relationships between categories
+* Example: Without encoding, a model might think "City_ID 3" > "City_ID 1"
+
+2. **Model Compatibility:** 
+* Most ML algorithms require numerical input
+* Enables use of linear models, neural networks, SVMs, etc.
+
+3. **Clear Representation**
+* Each category is independently represented
+* Easy to interpret which category is active
+
+4. **Handles Non-Ordinal Categories**
+* Perfect for nominal variables with no natural order
+* Examples: Colors, cities, product types
+
+
+
+.Disadvantages of One-Hot Encoding
+
+1. **Curse of Dimensionality**: WARNING: High cardinality features can explode feature space!
+
+1,000 unique cities → 1,000 new columns
+10,000 product IDs → 10,000 new columns
+2. **Sparse Data**
+* Most values are 0 (only one 1 per row)
+* Increased memory usage
+* Computational inefficiency
+3. **Multicollinearity**
+* Columns are linearly dependent: sum of all columns = 1
+* Can cause numerical instability in some algorithms
+* Solution: Drop one column (dummy coding)
+4. **Incomplete Vocabulary Problem** [[6]]
+[source,python]
+----
+# Training data sees: ['NYC', 'LA', 'Chicago']
+# Test data has: ['NYC', 'LA', 'Boston']  # Boston causes error!
+
+# Solution: Use handle_unknown='ignore'
+encoder = OneHotEncoder(handle_unknown='ignore')
+----
+
+.When to Use One-Hot Encoding
+1. **Low to Medium Cardinality** (<100 unique values) 
+2. **Nominal Categories** (no natural order)
+   * Colors: Red, Blue, Green
+   * Countries: USA, UK, Japan
+   * Product categories: Electronics, Clothing, Food
+
+3. **Stable Categories** (unlikely to see new values)
+4. **Model Requires Numerical Input**
+   * Linear/Logistic Regression
+   * Neural Networks
+   * Support Vector Machines
+
+5. **Interpretability Matters**
+   * Each coefficient represents one category's effect
+
+**Example Use Cases:**
+[source,python]
+----
+# Good candidates for one-hot encoding
+df['day_of_week']     # 7 values: Mon-Sun
+df['region']          # 5 values: North, South, East, West, Central  
+df['product_type']    # 10 values: known product categories
+df['education_level'] # 6 values: HS, Bachelor's, Master's, etc.
+----
+
+
+.❌ Avoid When:
+
+1. **High Cardinality** (>1000 unique values) [[6]]
+   * User IDs, Device IDs
+   * ZIP codes, IP addresses
+   * URLs, email domains
+
+2. **Ordinal Categories** (natural order exists)
+   * Ratings: Poor, Fair, Good, Excellent
+   * Sizes: S, M, L, XL
+   * Education levels (if order matters)
+
+3. **Text Data** (use embeddings instead)
+4. **Continuous Variables** (use scaling/binning)
+5. **Memory Constraints** (sparse matrices become too large)
+
+
+=== Feature Hashing
