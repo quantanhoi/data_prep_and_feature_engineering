@@ -143,10 +143,9 @@ encoded = pd.get_dummies(data, columns=['city'], prefix='city')
 
 .Disadvantages of One-Hot Encoding
 
-1. **Curse of Dimensionality**: WARNING: High cardinality features can explode feature space!
-
-1,000 unique cities → 1,000 new columns
-10,000 product IDs → 10,000 new columns
+1. **Curse of Dimensionality**: WARNING: High cardinality features can explode feature space.
+1000 unique cities → 1,000 new columns
+10000 product IDs → 10,000 new columns
 
 
 2. **Sparse Data**
