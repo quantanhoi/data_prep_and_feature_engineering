@@ -147,15 +147,21 @@ encoded = pd.get_dummies(data, columns=['city'], prefix='city')
 
 1,000 unique cities → 1,000 new columns
 10,000 product IDs → 10,000 new columns
+
+
 2. **Sparse Data**
 * Most values are 0 (only one 1 per row)
 * Increased memory usage
 * Computational inefficiency
+
+
 3. **Multicollinearity**
 * Columns are linearly dependent: sum of all columns = 1
 * Can cause numerical instability in some algorithms
 * Solution: Drop one column (dummy coding)
-4. **Incomplete Vocabulary Problem** [[6]]
+
+
+4. **Incomplete Vocabulary Problem** 
 [source,python]
 ----
 # Training data sees: ['NYC', 'LA', 'Chicago']
