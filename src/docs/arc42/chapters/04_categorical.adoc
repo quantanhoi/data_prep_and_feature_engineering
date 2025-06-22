@@ -215,3 +215,105 @@ df['education_level'] # 6 values: HS, Bachelor's, Master's, etc.
 
 
 === Feature Hashing
+
+Feature hashing, also known as the "hashing trick", is a technique for converting categorical variables (especially those with high cardinality) into a fixed-length numerical vector using a hash function. It is widely used in large-scale machine learning and natural language processing tasks.
+
+.What is Feature Hashing?
+Feature hashing maps each category (or token) to one of a fixed number of columns (buckets) using a hash function. Instead of creating a column for every unique category (as in one-hot encoding), all categories are distributed across a predefined number of columns. This approach is highly memory-efficient and scalable.
+
+.How it works
+1. Choose the number of output features (buckets), e.g., 1024.
+2. For each category value, compute its hash and map it to a bucket index.
+3. If multiple categories hash to the same bucket (collision), their values are combined (typically summed).
+4. The resulting feature vector has a fixed length, regardless of the number of unique categories.
+
+[source,python]
+----
+from sklearn.feature_extraction import FeatureHasher
+
+# Example: Hashing city names into 4 buckets
+data = [{'city': 'New York'}, {'city': 'London'}, {'city': 'Paris'}, {'city': 'New York'}]
+hasher = FeatureHasher(n_features=4, input_type='dict')
+hashed_features = hasher.transform(data)
+print(hashed_features.toarray())
+----
+
+.Advantages of Feature Hashing
+
+1. **Scalability:** Handles very high-cardinality features efficiently.
+2. **Fixed Output Size:** Output vector size is independent of the number of unique categories.
+3. **Memory Efficiency:** Reduces memory usage compared to one-hot encoding.
+4. **Speed:** Fast to compute, suitable for online learning and streaming data.
+
+.Disadvantages of Feature Hashing
+
+1. **Hash Collisions:** Different categories may map to the same bucket, causing information loss.
+2. **Non-Interpretability:** The meaning of each hashed feature is not human-interpretable.
+3. **Irreversibility:** Cannot recover the original category from the hashed value.
+4. **Potential for Reduced Accuracy:** Collisions can degrade model performance, especially with too few buckets.
+
+.When to Use Feature Hashing
+
+* When dealing with extremely high-cardinality categorical features (e.g., user IDs, URLs, words in text).
+* When memory or computational efficiency is critical.
+* In online learning or streaming scenarios where new categories may appear frequently.
+* When interpretability of individual features is not required.
+
+.When NOT to Use Feature Hashing
+
+* When the number of unique categories is small (use one-hot encoding instead).
+* When feature interpretability is important.
+* When hash collisions would significantly impact model accuracy.
+* For ordinal features where order matters.
+
+**Summary:**  
+Feature hashing is a powerful tool for efficiently encoding high-cardinality categorical variables, but it trades off interpretability and may introduce information loss due to collisions. Choose the number of buckets carefully to balance efficiency and
+
+
+
+=== Bin Counting
+
+Bin counting is a simple and efficient technique for encoding categorical variables, especially when the categories are already represented as non-negative integers (e.g., class labels, IDs). Instead of creating multiple columns (as in one-hot encoding), bin counting uses a single integer column to represent each category.
+
+.What is Bin Counting?
+Bin counting assigns each unique category an integer value (if not already present). The data is then represented as an array of these integer codes. This approach is memory-efficient and particularly useful for algorithms that can natively handle categorical features.
+
+.How it works
+1. Map each category to a unique integer (if not already integer-coded).
+2. Store the integer codes in a single column.
+3. Optionally, use `np.bincount` or similar functions to count occurrences of each category.
+
+[source,python]
+----
+import numpy as np
+
+# Example: category codes for each sample
+categories = np.array([1, 2, 2, 0, 1, 3, 1, 2])
+
+# Bin counting: counts occurrences of each category
+counts = np.bincount(categories)
+print(counts)  # Output: [1 3 3 1]
+----
+
+If your categories are strings, you can convert them to integers first:
+
+[source,python]
+----
+from sklearn.preprocessing import LabelEncoder
+
+categories = np.array(['cat', 'dog', 'dog', 'mouse', 'cat', 'cat'])
+le = LabelEncoder()
+int_categories = le.fit_transform(categories)
+print(int_categories)  # e.g., [0 1 1 2 0 0]
+
+counts = np.bincount(int_categories)
+print(counts)  # Output: [3 2 1]
+----
+
+.Advantages of Bin Counting
+
+1. **Memory Efficiency:** Uses a single column, saving memory compared to one-hot encoding.
+2. **Speed:** Fast to compute and easy to implement.
+3. **Suitable for High Cardinality:** Handles features with many categories efficiently.
+4. **Direct Use in Some Models:** Decision trees and some gradient boosting frameworks (like CatBoost) can use
+
