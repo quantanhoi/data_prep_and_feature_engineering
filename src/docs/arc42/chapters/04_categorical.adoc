@@ -382,3 +382,70 @@ def odds_ratio_encoding(df, col, target):
 # Example usage:
 df['feature_encoded'] = odds_ratio_encoding(df, 'feature', 'target')
 ----
+
+
+=== Feature Cross
+
+.What is Feature Cross?
+
+Feature cross is a technique used in machine learning to create new features by combining two or more existing categorical features. This process generates interaction features that can capture relationships between variables that may not be apparent when considering each feature independently. Feature crossing is especially useful for models that do not inherently capture feature interactions, such as linear models.
+
+.How Does Feature Cross Work?
+
+Feature crossing works by concatenating the values of two or more categorical features to form a new, composite feature. For example, if you have two features, `color` (with values like "red", "blue") and `shape` (with values like "circle", "square"), a feature cross would create new values such as "red_circle", "blue_square", etc.
+
+This can be implemented in code by simply joining the string representations of the feature values, or by using specialized functions in libraries such as TensorFlow's `tf.feature_column.crossed_column` or scikit-learn's `ColumnTransformer` with custom transformers.
+
+.Advantages
+
+- *Captures interactions*: Allows models to learn from the interaction between features, which can improve predictive performance.
+- *Improves linear models*: Enables linear models to approximate non-linear relationships by introducing interaction terms.
+- *Flexible*: Can be applied to any combination of categorical features.
+
+.Disadvantages
+
+- *High cardinality*: Crossing features can lead to a large number of unique values, increasing the dimensionality of the data and potentially causing sparsity.
+- *Overfitting*: With many crossed features, the model may overfit to the training data, especially if the dataset is not large enough.
+- *Computational cost*: Increased number of features can lead to higher memory usage and slower training times.
+
+.When to Use
+
+- When you suspect that the interaction between two or more categorical features is important for prediction.
+- When using models that do not automatically capture feature interactions (e.g., linear regression, logistic regression).
+- When the number of unique combinations (cardinality) is manageable.
+
+.When Not to Use
+
+- When the crossed features result in extremely high cardinality, leading to computational inefficiency or overfitting.
+- When using models that already capture feature interactions automatically (e.g., decision trees, random forests, gradient boosting machines).
+- When there is insufficient data to support learning from the crossed features.
+
+.Example
+
+Suppose you have two categorical features: `city` (with values "London", "Paris") and `device` (with values "mobile", "desktop"). A feature cross would create new features like "London_mobile", "Paris_desktop", etc.
+
+[source,python]
+----
+import pandas as pd
+
+df = pd.DataFrame({
+    'city': ['London', 'Paris', 'London', 'Paris'],
+    'device': ['mobile', 'desktop', 'desktop', 'mobile']
+})
+
+df['city_device'] = df['city'] + '_' + df['device']
+print(df)
+----
+
+.Output:
+----
+     city   device    city_device
+0  London   mobile   London_mobile
+1   Paris  desktop   Paris_desktop
+2  London  desktop   London_desktop
+3   Paris   mobile   Paris_mobile
+----
+
+.Summary
+
+Feature crossing is a powerful technique for enhancing categorical feature representation, especially in linear models. However, it should be used judiciously to avoid issues with high cardinality and overfitting.
