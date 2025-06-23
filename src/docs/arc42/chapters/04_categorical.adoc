@@ -317,3 +317,68 @@ print(counts)  # Output: [3 2 1]
 3. **Suitable for High Cardinality:** Handles features with many categories efficiently.
 4. **Direct Use in Some Models:** Decision trees and some gradient boosting frameworks (like CatBoost) can use
 
+
+=== Odds Ratio Encoding
+
+.What is Odds Ratio Encoding?
+
+Odds Ratio Encoding is a categorical encoding technique that transforms categorical variables into numerical values based on the odds ratio of the target variable for each category. The odds ratio measures the likelihood of a particular outcome (e.g., target = 1) occurring in one category compared to the likelihood of it occurring in all other categories. This encoding is particularly useful in binary classification problems.
+
+.How it Works
+
+1. For each category in the categorical feature:
+   * Calculate the odds of the target being 1 for that category:
+     odds = (number of target=1 in category) / (number of target=0 in category)
+   * Calculate the odds of the target being 1 for all other categories combined.
+   * Compute the odds ratio:
+     odds_ratio = odds_in_category / odds_in_other_categories
+2. Optionally, take the logarithm of the odds ratio to reduce skewness and handle large values.
+3. Replace each category with its corresponding (log) odds ratio.
+
+.Advantages
+
+* Captures the relationship between the categorical feature and the target variable.
+* Useful for high-cardinality categorical features.
+* Can improve model performance in binary classification tasks.
+* Reduces dimensionality compared to one-hot encoding.
+
+.Disadvantages
+
+* Can lead to overfitting if categories have few samples (rare categories).
+* Not suitable for features with no relationship to the target.
+* Requires target variable, so cannot be used in unsupervised settings.
+* Sensitive to data leakage if not applied correctly (should be fitted only on training data).
+
+.When to Use
+
+* When you have categorical features with many unique values (high cardinality).
+* When the categorical feature is strongly related to the target variable.
+* In binary classification problems.
+
+.When Not to Use
+
+* When the categorical feature has little or no relationship with the target.
+* In unsupervised learning tasks.
+* When categories have very few samples (risk of overfitting).
+* In multi-class classification (unless adapted appropriately).
+
+.Example
+
+[source,python]
+----
+import pandas as pd
+import numpy as np
+
+def odds_ratio_encoding(df, col, target):
+    odds_ratios = {}
+    for category in df[col].unique():
+        mask = df[col] == category
+        odds_cat = (df[mask][target] == 1).sum() / max((df[mask][target] == 0).sum(), 1)
+        odds_other = (df[~mask][target] == 1).sum() / max((df[~mask][target] == 0).sum(), 1)
+        odds_ratio = odds_cat / odds_other if odds_other != 0 else np.nan
+        odds_ratios[category] = np.log(odds_ratio) if odds_ratio > 0 else 0
+    return df[col].map(odds_ratios)
+
+# Example usage:
+df['feature_encoded'] = odds_ratio_encoding(df, 'feature', 'target')
+----
