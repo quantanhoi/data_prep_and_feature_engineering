@@ -60,8 +60,8 @@ include::chapters/03_scaling_numerical.adoc[]
 include::chapters/04_categorical.adoc[]
 
 // <<<<
-// // 5. Building Block View
-// include::chapters/05_building_block_view.adoc[]
+// 5. Building Block View
+include::chapters/05_pandas.adoc[]
 
 // <<<<
 // // 6. Runtime View

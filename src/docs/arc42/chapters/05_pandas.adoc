@@ -1,0 +1,177 @@
+:jbake-title: Pandas
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 5
+:filename: /chapters/05_pandas.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-building-block-view]]
+
+
+== Pandas
+
+=== Data Access & Select
+
+This document outlines common pandas functions for selecting and inspecting data, mirroring the style used in *03_scaling_numerical.adoc*. Use it as a quick reference for exploring and manipulating DataFrames.
+
+==== df.head()
+.Shows the first few rows of a DataFrame.
+[source,python]
+----
+import pandas as pd
+
+df = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie'],
+    'Age': [25, 30, 35]
+})
+
+print(df.head())  # By default, shows first 5 rows
+----
+*When to Use:*  
+- Quickly inspect the top of a dataset to verify columns, data types, and sample records.
+
+*When Not to Use:*  
+- Large-scale data exploration beyond the first few rows.
+
+==== df.tail()
+.Shows the last few rows of a DataFrame.
+[source,python]
+----
+import pandas as pd
+
+df = pd.DataFrame({
+    'Name': ['Alice', 'Bob', 'Charlie', 'Diana', 'Ethan'],
+    'Score': [88, 92, 79, 85, 90]
+})
+
+print(df.tail(2))  # Shows the last 2 rows
+----
+*When to Use:*  
+- Check recent rows, e.g., last few records in a time series.
+
+*When Not to Use:*  
+- Full data inspection or large-scale analysis.
+
+==== df.describe()
+.Provides summary statistics for numeric columns.
+[source,python]
+----
+import pandas as pd
+
+df = pd.DataFrame({
+    'col1': [10, 20, 30],
+    'col2': [5, 10, 15]
+})
+
+print(df.describe())
+----
+*When to Use:*  
+- Get quick insight into count, mean, standard deviation, etc.
+
+*When Not to Use:*  
+- Investigating non-numeric columns in detail (it won’t summarize strings).
+
+==== df.sort_values('col')
+.Sorts a DataFrame by a specified column.
+[source,python]
+----
+import pandas as pd
+
+df = pd.DataFrame({
+    'Name': ['Charlie', 'Bob', 'Alice'],
+    'Age': [35, 30, 25]
+})
+
+sorted_df = df.sort_values('Age')
+print(sorted_df)
+----
+*When to Use:*  
+- Order data for better readability or to prepare for merges/joins.
+
+*When Not to Use:*  
+- Data that is too large for in-memory sorting.
+
+==== .loc[row, col]
+.Label-based data selection.
+[source,python]
+----
+import pandas as pd
+
+df = pd.DataFrame({
+    'City': ['Paris', 'London', 'Berlin'],
+    'Population': [2148271, 8982000, 3645000]
+})
+
+pop_london = df.loc[df['City'] == 'London', 'Population']
+print(pop_london)
+----
+*When to Use:*  
+- Selecting rows and columns by labels or boolean conditions.
+
+*When Not to Use:*  
+- Pure index-based selection; use .iloc instead.
+
+==== .iloc[row, col]
+.Index-based (positional) data selection.
+[source,python]
+----
+import pandas as pd
+
+df = pd.DataFrame({
+    'Country': ['France', 'UK', 'Germany'],
+    'Capital': ['Paris', 'London', 'Berlin']
+})
+
+first_row = df.iloc[0, :]
+print(first_row)
+----
+*When to Use:*  
+- Access by integer positions (like array indexing).
+
+*When Not to Use:*  
+- Selecting by label or condition; use .loc instead.
+
+==== .at[row, col]
+.Fast label-based single value access.
+[source,python]
+----
+import pandas as pd
+
+df = pd.DataFrame({
+    'Key': ['item1', 'item2'],
+    'Price': [10.99, 8.75]
+})
+
+val = df.at[1, 'Price']
+print(val)
+----
+*When to Use:*  
+- Optimized for retrieving a single value at known row and column labels.
+
+*When Not to Use:*  
+- Selecting multiple rows or columns at once.
+
+==== .iat[row, col]
+.Fast index-based single value access.
+[source,python]
+----
+import pandas as pd
+
+df = pd.DataFrame({
+    'Key': ['item1', 'item2'],
+    'Price': [10.99, 8.75]
+})
+
+val = df.iat[1, 1]
+print(val)
+----
+*When to Use:*  
+- Optimized for retrieving a single value at known row and column positions.
+
+*When Not to Use:*  
+- Selecting by label or for retrieving multiple values.
