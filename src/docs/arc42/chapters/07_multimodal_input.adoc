@@ -1,0 +1,297 @@
+:jbake-title: Multimodal Input
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 7
+:filename: /chapters/07_multimodal_input.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+[[section-multimodal-input]]
+== Multimodal Input
+
+=== What is Multimodal Input?
+
+Multimodal input is a design pattern that addresses the challenge of representing different types of data or data with complex structures. The key idea is to concatenate all available data representations, such as text, images, numerical features, or categorical variables into a single combined input for a model.
+
+This approach enables machine learning models to make use of diverse information sources within a unified framework, often leading to better performance than using any single data type alone.
+
+=== Core Concepts
+
+==== Data Type Fusion
+
+* **Text Data**: Processed through embeddings to capture semantic meaning
+* **Categorical Data**: One-hot encoded to represent discrete categories
+* **Numerical Data**: Used directly or normalized for optimal training
+* **Feature Concatenation**: Combined into a unified feature vector
+
+==== Why Use Multimodal Approaches?
+
+* **Complementary Information**: Different data types capture different aspects of the problem
+* **Improved Performance**: Multiple perspectives often lead to better predictions
+* **Real-world Relevance**: Most real problems involve multiple data types
+* **Robustness**: Model is less dependent on any single feature type
+
+=== Restaurant Review Example
+
+The notebook demonstrates multimodal input using restaurant review data with three data types:
+
+[source,python]
+----
+reviews_data = {
+    "review_text": ["The food was great, but it took forever to get seated.", 
+                   "The tacos were life changing.", 
+                   "This food made me question the presence of my taste buds."],
+    "meal_type": ["lunch", "dinner", "dinner"],     # Categorical
+    "meal_total": [50, 75, 60],                     # Numerical
+    "rating": [4, 5, 1]                             # Target variable
+}
+----
+
+=== Text Processing Branch
+
+==== Text Preprocessing Pipeline
+
+[source,python]
+----
+# 1. Create vocabulary mapping
+vocab_size = 50
+tokenize = keras.preprocessing.text.Tokenizer(num_words=vocab_size)
+tokenize.fit_on_texts(reviews_data["review_text"])
+
+# 2. Convert text to sequences
+reviews_train = tokenize.texts_to_sequences(reviews_data["review_text"])
+
+# 3. Pad sequences to fixed length
+max_sequence_len = 20
+reviews_train = keras.preprocessing.sequence.pad_sequences(
+    reviews_train, maxlen=max_sequence_len, padding="post"
+)
+----
+
+==== Text Branch Architecture
+
+[source,python]
+----
+# Input layer for padded text sequences
+embedding_input = Input(shape=(max_sequence_len,))  # (20,) - sequence length
+
+# Embedding layer converts word IDs to dense vectors
+embedding_layer = Embedding(input_dim=vocab_size, output_dim=64)(embedding_input)
+# Output: (batch_size, 20, 64) - each word becomes a 64-dim vector
+----
+
+=== Tabular Data Processing Branch
+
+==== Categorical Feature Encoding
+
+[source,python]
+----
+# One-hot encode meal_type categories
+possible_meal_vocab = ['breakfast', 'lunch', 'dinner']
+one_hot_meals = []
+for meal in reviews_data['meal_type']:
+    one_hot_arr = [0] * len(possible_meal_vocab)
+    one_hot_arr[possible_meal_vocab.index(meal)] = 1
+    one_hot_meals.append(one_hot_arr)
+----
+
+**Example Output:**
+----
+"lunch"  → [0, 1, 0]
+"dinner" → [0, 0, 1]
+"dinner" → [0, 0, 1]
+----
+
+==== Feature Combination
+
+[source,python]
+----
+# Combine one-hot vectors with numerical features
+tabular_features = np.concatenate(
+    (
+        np.array(one_hot_meals),                                   # (batch, 3)
+        np.expand_dims(reviews_data["meal_total"], axis=1),        # (batch, 1)
+    ),
+    axis=1                                                         # (batch, 4)
+)
+----
+
+**Result:** `[0, 1, 0, 50]` - meal type + price combined
+
+==== Tabular Branch Architecture
+
+[source,python]
+----
+# Input for combined tabular features
+tabular_input = Input(shape=(tabular_features.shape[1],))  # (4,)
+
+# Dense layer processes tabular data
+tabular_layer = Dense(32, activation='relu')(tabular_input)
+# Output: (batch_size, 32) - learned tabular features
+----
+
+=== The Flatten Layer
+
+==== Purpose and Function
+
+The Flatten layer is crucial for multimodal architectures because:
+
+* **Dimensionality Matching**: Converts multi-dimensional embeddings to 1D vectors
+* **Concatenation Preparation**: Enables combining different data types
+* **Dense Layer Compatibility**: Dense layers require 1D input vectors
+
+==== Flatten Example
+
+Before Flattening (2D embedding matrix):
+----
+[
+  [0.1, 0.2, 0.3],   # Token 1 embedding
+  [0.4, 0.5, 0.6],   # Token 2 embedding
+  [0.7, 0.8, 0.9],   # Token 3 embedding
+  [1.0, 1.1, 1.2]    # Token 4 embedding
+]
+----
+
+After Flattening (1D vector):
+----
+[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]
+Length: 4 × 3 = 12
+----
+
+=== Model Architecture
+
+==== Two-Branch Architecture
+
+[source,python]
+----
+# Text branch with flattening
+embedding_input = Input(shape=(max_sequence_len,))
+embedding_layer = Embedding(vocab_size, 64)(embedding_input)
+flattened_text = Flatten()(embedding_layer)  # (20*64 = 1280,)
+
+# Tabular branch
+tabular_input = Input(shape=(4,))
+tabular_layer = Dense(32, activation='relu')(tabular_input)  # (32,)
+
+# Merge branches
+merged = keras.layers.concatenate([flattened_text, tabular_layer])  # (1312,)
+merged_dense = Dense(16, activation='relu')(merged)
+output = Dense(1)(merged_dense)  # Predict rating
+
+# Complete model
+model = Model(inputs=[embedding_input, tabular_input], outputs=output)
+----
+
+==== Layer-by-Layer Flow
+
+1. **Text Input**: `(batch_size, 20)` - padded word sequences
+2. **Embedding**: `(batch_size, 20, 64)` - word vectors
+3. **Flatten**: `(batch_size, 1280)` - single text vector
+4. **Tabular Input**: `(batch_size, 4)` - combined features
+5. **Tabular Dense**: `(batch_size, 32)` - processed features
+6. **Concatenation**: `(batch_size, 1312)` - unified representation
+7. **Final Dense**: `(batch_size, 16)` - learned features
+8. **Output**: `(batch_size, 1)` - rating prediction
+
+=== Model Training
+
+==== Data Preparation
+
+[source,python]
+----
+# Prepare inputs for training
+X_text = reviews_train              # Padded text sequences
+X_tabular = tabular_features        # Combined categorical + numerical
+y = reviews_data["rating"]          # Target ratings
+
+# Train the model
+model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+model.fit([X_text, X_tabular], y, epochs=50, validation_split=0.2)
+----
+
+==== Model Summary Output
+
+The model architecture shows:
+* **Total Parameters**: Combination of embedding weights, dense weights, and biases
+* **Input Shapes**: Two separate input branches with different dimensions
+* **Output Shape**: Single prediction value
+
+=== Advanced Multimodal Patterns
+
+==== Multiple Text Representations
+
+[source,python]
+----
+# Different text processing approaches
+sequence_branch = Embedding(vocab_size, 64)(text_input)      # Sequential
+bow_branch = Dense(32)(bow_input)                            # Bag-of-words
+combined_text = concatenate([flatten(sequence_branch), bow_branch])
+----
+
+==== Image + Text + Tabular
+
+[source,python]
+----
+# Image processing branch
+image_input = Input(shape=(224, 224, 3))
+cnn_features = Conv2D(32, 3)(image_input)
+image_features = Flatten()(GlobalAveragePooling2D()(cnn_features))
+
+# Combine all modalities
+multimodal = concatenate([text_features, image_features, tabular_features])
+----
+
+=== Best Practices
+
+==== Feature Scaling
+
+* **Text Embeddings**: Usually don't need scaling (learned during training)
+* **Numerical Features**: Normalize to similar ranges as embeddings
+* **Categorical Features**: One-hot encoding naturally scales to [0,1]
+
+==== Architecture Design
+
+* **Branch Sizes**: Balance complexity across different input types
+* **Concatenation Point**: Experiment with early vs. late fusion
+* **Regularization**: Apply dropout to prevent overfitting on any single modality
+
+==== Common Pitfalls
+
+* **Dimension Mismatch**: Ensure all branches output compatible shapes for concatenation
+* **Feature Dominance**: One data type overwhelming others due to scale differences
+* **Overfitting**: Complex multimodal models can easily overfit with limited data
+
+=== Real-World Applications
+
+==== E-commerce
+
+* **Product Recommendations**: Text descriptions + user behavior + product images
+* **Review Analysis**: Review text + rating + user demographics
+
+==== Healthcare
+
+* **Diagnosis**: Medical images + patient history + lab results
+* **Treatment Prediction**: Symptoms + genetic data + lifestyle factors
+
+==== Social Media
+
+* **Content Classification**: Post text + images + user metadata
+* **Engagement Prediction**: Content features + user behavior + temporal data
+
+=== Key Insights
+
+==== Complementary Strengths
+
+* **Text**: Captures semantic meaning and context
+* **Categorical**: Represents discrete choices and classifications
+* **Numerical**: Provides quantitative measurements and scales
+* **Combined**: Leverages all available information for better predictions
+
+==== Performance Benefits
+
+* **Improved Accuracy**: Multiple data sources provide more complete picture
+* **Robustness**: Less sensitive to noise in any single input type
+* **Generalization**: Better performance on diverse test cases
+* **Interpretability**: Can analyze contribution of different modalities
