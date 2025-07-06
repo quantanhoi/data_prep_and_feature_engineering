@@ -63,13 +63,13 @@ include::chapters/04_categorical.adoc[]
 // 5. Building Block View
 include::chapters/05_pandas.adoc[]
 
-// <<<<
-// // 6. Runtime View
-// include::chapters/06_runtime_view.adoc[]
+<<<<
+// 6. Runtime View
+include::chapters/06_embedding.adoc[]
 
-// <<<<
-// // 7. Deployment View
-// include::chapters/07_deployment_view.adoc[]
+<<<<
+// 7. Deployment View
+include::chapters/07_multimodal_input.adoc[]
 
 // <<<<
 // // 8. Concepts

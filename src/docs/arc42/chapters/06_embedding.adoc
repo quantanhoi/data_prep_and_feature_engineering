@@ -11,7 +11,7 @@ ifndef::imagesdir[:imagesdir: ../../images]
 [[section-embedding]]
 == Embedding
 
-== What is Embedding?
+=== What is Embedding?
 
 Embedding is a technique that maps discrete categorical data (like words, categories, or IDs) into dense, continuous vector representations. Instead of using sparse one-hot encoding, embeddings represent each category as a learnable dense vector of real numbers.
 
