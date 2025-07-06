@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "noble-district-459911-t9",
+  "private_key_id": "1c0ed90c64dd7e8c4452673eb0c260e28f65d85f",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC1bhaCBjmY7EjM\n2OabpJlSPm2IF5CQ9XjhLCmYvbv6fCg7/EmxUMTRJWQUOPqZu6Iri9Z2crWcL4Wg\nuqTVUZHG0uKhLP/ZAKxIxp5UFfMYeEdPVJ2b4ppcgjGYjE5wOkGNh4tSNvapEv7x\nqu3jqbYdg5dr2NEwsaSyoAp14bgXWRk0JbQVcWXBumCXsu41z5uaJZm68ZyamRTF\nKfUNGdHIh0VElqd9K+eJyz9nPP5ty1IdIOVSCdWBG/7/BBxbUiukhWuJO8wNBLrr\nHyv7kZqC8MiTTRsLrgdiXeVd5qyv8GgDxqV9axeEFbvsOyezH/ui2zJ5MHg6VycT\nX1wz7Ed7AgMBAAECggEADdmgmD53aSgoipLIT/tpxPCFFg2OeLJ0juP7LPDXB9Ew\nlRu2WHXtAHZVRIHxB4leYOqk7ZfmK00pa1K0QKCge0ggCuPPiDZX8JpQ/eRLEYQl\nFXZFLeBHnmZF+PpFBqY72N0PErClddTAZ5x/2pBbGbew+IetuITnKMe05Ljdf9Kp\nXlt+eZupZtr2yKLyyK6pXqxm5sD/uRbgO+GxAu8dsMNLrtvcKjeEn0c4rV0llJjG\nAwU7wXAHfeV/uoePBzSJ6wQTIq57PitWJcSDZN3ekM9lfFllAAAOZwN+grVsBf9Y\nKwrWdvsebzljGz9Wpn6xOwks/k7Daw9Kz4xnNj1x4QKBgQDtRRtRx0HmkX9+r6zb\nMI3qX7dMkGDf6cwb5e9/FKB4fHNv29/MXj7vfsQuPQQ/OdqY/zht7rLBKoDEAZen\nnzqxOK6BPESotWb5eIIHFskwjf6m9ZV4xAP9NnphQm1FUHNA4NSmF/gro7LQN1qR\nNijGwAZgRTtHz8/OageiO4i5SwKBgQDDwIjiEeausr6CI0qeoRhyekArIXZcSHyr\nxbLeHomWtN928U77JhsHjsvq6VkWtyvlFPDenQTan4Xpec0wSEQ+ur4xVgq9YTTX\npl0FTYNQLxN6gpqNR8OAXnME49tN659thpJWFhtMXT+l7ioFYWtFySy6fKFwYwWJ\nVOcDQ1F8kQKBgEbBzRveKDDyQussyIe1Ox0h3i/e/oTH3C6Vq45iQFiuBF7fWyY/\nFNWnICoJ2DJitmXZ9qISBQzF+BB7yRYbzgz7sk6oAnGtZ0AOR/iFOwpXzhFMO38A\nNZBVprlKbfu1uikm40OE8mVRNAoT99ZGKHLc4Qnkm4EW4AnWZOBkkKlxAoGANfSL\nxkRI4T5DZHt1xeOBaYxow3qltSoFsxL7Cl5AblnMfmxk6LTIHn0tl8JZ2/kBEFOF\nUNbWz6vIrWH1PKmupduzMMYWj7yLZCVm3l9PInrXU51MHET7jhZ6fY6QlBmuB/Jf\nw3q0a4gIUyQiUPlZKBMbUQupM+EXVZMhWbTkcQECgYBv8z+RrFWTUERqRrNH6G9a\ndjmrh+NpUOrcVG8BKQ/Am618dQi1BNfhkWkLnkpW0MsqOTECcHPf8t5UbLMv5juq\nCCJbdvHxH7t19Thaz4kfFPnTSUV4T/LgGvpYCRTDfmRFUYNG5xDhkiJbUkAtIYBr\nN47ySR3c3IAcOkzaHJ2LUg==\n-----END PRIVATE KEY-----\n",
+  "client_email": "bigquery-data-access@noble-district-459911-t9.iam.gserviceaccount.com",
+  "client_id": "108467555516072024393",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/bigquery-data-access%40noble-district-459911-t9.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
