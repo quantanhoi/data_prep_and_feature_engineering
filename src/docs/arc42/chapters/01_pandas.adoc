@@ -147,6 +147,12 @@ df = pd.DataFrame({
 # loc is label-based
 pop_london = df.loc[df['City'] == 'London', 'Population']
 print(pop_london)
+
+# or you can use a mask with .loc
+mask = df['City'].eq('London')
+pop_london_mask = df.loc[mask, 'Population']
+print(pop_london_mask)
+
 ----
 
 Output:
@@ -161,9 +167,9 @@ Name: Population, dtype: int64
 Loc parses its two arguments as follows:
 * .loc sees a boolean array on the first axis, keeps all rows whose mask element is True, and then returns the Population column of those rows.
 Example:
-0 False
-1 True
-2 False
+* 0 False
+* 1 True
+* 2 False
 
 
 *When to Use:*  
@@ -179,13 +185,42 @@ Example:
 import pandas as pd
 
 df = pd.DataFrame({
-    'Country': ['France', 'UK', 'Germany'],
-    'Capital': ['Paris', 'London', 'Berlin']
+    'City': ['Paris', 'London', 'Berlin', 'London'],
+    'Population': [2148271, 8982000, 3645000, 1234567]
 })
 
-first_row = df.iloc[0, :]
-print(first_row)
+#iloc is index-based
+pop_london_iloc = df.iloc[2, :]  # 0 is index of city, 1 is index of population, use : to select all columns
+print(pop_london_iloc)
 ----
+.Output:
+[source,python]
+----
+City           Berlin
+Population    3645000
+Name: 2, dtype: object
+----
+.Or if you want to make it the same as .loc where it returns all the rows that passed the condition:
+[source,python]
+----
+# convert the column label to its positional index
+pop_idx = df.columns.get_loc('Population')
+# Alternatively, to use .iloc, convert the mask to integer positions:
+row_indices = mask[mask].index
+# same rows/column as your .loc version
+pop_london = df.iloc[row_indices, pop_idx]
+print(pop_london)
+----
+.Output:
+[source,python]
+----
+1    8982000
+3    1234567
+Name: Population, dtype: int64
+----
+
+
+
 *When to Use:*  
 - Access by integer positions (like array indexing).
 
