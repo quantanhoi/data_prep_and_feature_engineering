@@ -37,12 +37,26 @@ Or use Poetry shell:
 ```bash
 poetry shell
 ```
+if you use shell to activate environment, use ```exit``` to deactivate environment
 
 Or activate a local virtual environment:
 
 ```bash
 source .venv/bin/activate
 ```
+
+### Poetry install
+If you have a problem with poetry.lock, try this: 
+
+```bash
+sudo apt install python3-pip
+pip install --upgrade poetry
+```
+then activate the environment and install:
+```bash
+poetry install
+```
+
 
 ## Deployment
 

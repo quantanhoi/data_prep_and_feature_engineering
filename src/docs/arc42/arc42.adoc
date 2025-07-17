@@ -45,7 +45,8 @@ endif::arc42help[]
 
 <<<<
 // 1. Introduction and Goals
-include::chapters/01_tensorflow_horse_truck.adoc[]
+include::chapters/01_pandas.adoc[]
+
 
 <<<<
 // 2. Architecture Constraints
@@ -61,15 +62,15 @@ include::chapters/04_categorical.adoc[]
 
 // <<<<
 // 5. Building Block View
-include::chapters/05_pandas.adoc[]
+include::chapters/05_embedding.adoc[]
 
 <<<<
 // 6. Runtime View
-include::chapters/06_embedding.adoc[]
+include::chapters/06_multimodal_input.adoc[]
 
 <<<<
 // 7. Deployment View
-include::chapters/07_multimodal_input.adoc[]
+
 
 // <<<<
 // // 8. Concepts
@@ -92,3 +93,4 @@ include::chapters/07_multimodal_input.adoc[]
 // include::chapters/12_glossary.adoc[]
 
 
+include::chapters/13_tensorflow_horse_truck.adoc[]

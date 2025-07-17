@@ -1,9 +1,16 @@
+[tool.poetry]
+name = "first-test-demo"
+version = "0.1.0"
+description = ""
+authors = ["Trung Thieu Quang <thieuquangtrung1999@gmail.com>"]
+packages = [{include = "first_test_demo", from = "src"}]
+
 [project]
 name = "first-test-demo"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Trung Thieu Quang",email = "thieuquangtrung1999@gmail.com"}
+    {name = "Trung Thieu Quang", email = "thieuquangtrung1999@gmail.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.10,<3.13"
@@ -20,10 +27,6 @@ dependencies = [
     "scikit-learn (>=1.6.1,<2.0.0)",
     "joblib (>=1.5.1,<2.0.0)"
 ]
-
-[tool.poetry]
-packages = [{include = "first_test_demo", from = "src"}]
-
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

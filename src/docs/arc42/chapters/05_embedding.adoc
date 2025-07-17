@@ -2,8 +2,8 @@
 :jbake-type: page_toc
 :jbake-status: published
 :jbake-menu: arc42
-:jbake-order: 6
-:filename: /chapters/06_embedding.adoc
+:jbake-order: 5
+:filename: /chapters/05_embedding.adoc
 ifndef::imagesdir[:imagesdir: ../../images]
 
 :toc:

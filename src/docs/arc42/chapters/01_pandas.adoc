@@ -2,8 +2,8 @@
 :jbake-type: page_toc
 :jbake-status: published
 :jbake-menu: arc42
-:jbake-order: 5
-:filename: /chapters/05_pandas.adoc
+:jbake-order: 1
+:filename: /chapters/01_pandas.adoc
 ifndef::imagesdir[:imagesdir: ../../images]
 
 :toc:
@@ -18,6 +18,10 @@ ifndef::imagesdir[:imagesdir: ../../images]
 === Data Access & Select
 
 This document outlines common pandas functions for selecting and inspecting data, mirroring the style used in *03_scaling_numerical.adoc*. Use it as a quick reference for exploring and manipulating DataFrames.
+
+
+
+
 
 ==== df.head()
 .Shows the first few rows of a DataFrame.
@@ -38,6 +42,10 @@ print(df.head())  # By default, shows first 5 rows
 *When Not to Use:*  
 - Large-scale data exploration beyond the first few rows.
 
+
+
+
+
 ==== df.tail()
 .Shows the last few rows of a DataFrame.
 [source,python]
@@ -57,6 +65,10 @@ print(df.tail(2))  # Shows the last 2 rows
 *When Not to Use:*  
 - Full data inspection or large-scale analysis.
 
+
+
+
+
 ==== df.describe()
 .Provides summary statistics for numeric columns.
 [source,python]
@@ -75,6 +87,29 @@ print(df.describe())
 
 *When Not to Use:*  
 - Investigating non-numeric columns in detail (it won’t summarize strings).
+
+
+==== df.sort_index()
+.Sorts a DataFrame by its index.
+[source,python]
+----
+import pandas as pd
+df = pd.DataFrame({
+    'Name': ['Charlie', 'Bob', 'Alice'],
+    'Age': [35, 30, 25]
+}, index=[2, 1, 0])
+
+sorted_df = df.sort_index()
+print(sorted_df)
+----
+*When to Use:*
+- When you need to order data based on the DataFrame's index.
+- Useful for time series data or when the index is meaningful.
+*When Not to Use:*
+- When you need to sort by a specific column instead of the index; use `df.sort_values()` instead.
+
+
+
 
 ==== df.sort_values('col')
 .Sorts a DataFrame by a specified column.
@@ -96,6 +131,9 @@ print(sorted_df)
 *When Not to Use:*  
 - Data that is too large for in-memory sorting.
 
+
+
+
 ==== .loc[row, col]
 .Label-based data selection.
 [source,python]
@@ -103,13 +141,31 @@ print(sorted_df)
 import pandas as pd
 
 df = pd.DataFrame({
-    'City': ['Paris', 'London', 'Berlin'],
-    'Population': [2148271, 8982000, 3645000]
+    'City': ['Paris', 'London', 'Berlin', 'London'],
+    'Population': [2148271, 8982000, 3645000, 1234567]
 })
-
+# loc is label-based
 pop_london = df.loc[df['City'] == 'London', 'Population']
 print(pop_london)
 ----
+
+Output:
+[source,python]
+----
+1    8982000
+3    1234567
+Name: Population, dtype: int64
+----
+
+.How it works:
+Loc parses its two arguments as follows:
+* .loc sees a boolean array on the first axis, keeps all rows whose mask element is True, and then returns the Population column of those rows.
+Example:
+0 False
+1 True
+2 False
+
+
 *When to Use:*  
 - Selecting rows and columns by labels or boolean conditions.
 
