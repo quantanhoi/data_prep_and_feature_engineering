@@ -317,7 +317,8 @@ print("Original DataFrame:", df.iloc[::,::], sep='\n')
 
 # 1️⃣  Drop any row that has at least one NaN
 clean_rows_any = df.dropna()    #default is axis=rows, how ='any'
-print('clean rows: ',clean_rows_any, sep='\n')  #this will return empty dataframe because all rows have at least one NaN
+print('clean rows: ',clean_rows_any, sep='\n')  
+#this will return empty dataframe because all rows have at least one NaN
 
 clean_rows_all = df.dropna(how='all')   # this will drop rows only if all values are NaN
 print('clean rows all: ',clean_rows_all, sep='\n')
@@ -449,4 +450,144 @@ dtype: int64
 
 *When Not to Use:*  
 - Situations requiring the *inverse*—in that case use `.notna()` for readability.  
+
+
+=== Custom Transformations
+==== .agg()
+.Aggregation on a DataFrame or a GroupBy object.
+[source,python]
+----
+import pandas as pd
+import numpy as np
+
+df = pd.DataFrame({
+    "Team": ["A", "A", "B", "B"],
+    "Points": [10, 12, 7, 9],
+    "Assists": [5, 7, 3, 4]
+})
+
+# 1️⃣  Single aggregate on the whole DataFrame
+totals = df.agg("sum")
+print(totals)
+
+# 2️⃣  Multiple aggregates after grouping
+print(df.head())
+team_stats = (
+    df.groupby("Team")
+        .agg(
+            pts_mean=("Points", "mean"),     # named aggregation
+            ast_sum =("Assists", "sum")
+        )
+)
+print(team_stats)
+----
+.Output:
+[source,python]
+----
+Team       AABB
+Points       38
+Assists      19
+dtype: object
+  Team  Points  Assists
+0    A      10        5
+1    A      12        7
+2    B       7        3
+3    B       9        4
+      pts_mean  ast_sum
+Team                   
+A         11.0       12
+B          8.0        7
+----
+*When to Use:*  
+- You need one-row-per-group summaries such as mean, sum, min/max, count, etc.  
+- You want several different functions at once (named aggregation syntax is concise). 
+
+*When Not to Use:*  
+- You must return an object the same shape as the original (use `.transform()` instead).  
+- The function you apply is not reduction-like (e.g. standardising each value).
+
+
+==== .transform()
+.Element-wise transform that returns an object of the same size.
+[source,python]
+----
+df['Quadrat_point'] = df['Points'].transform(lambda x: x**2) # applies the function lamba x: x**2 to each element in the "Points" column
+print(df.head())  
+----
+.Output:
+[source,python]
+----
+Team  Points  Assists  Points_z  Quadrat_point
+0    A      10        5   0.27735            100
+1    A      12        7   1.38675            144
+2    B       7        3  -1.38675             49
+3    B       9        4  -0.27735             81
+----
+*When to Use:*  
+- You want to broadcast a group-level calculation back to every row (e.g. z-scores, filling NA with group median). [[1]]  
+- Feature engineering steps that must preserve row order and length (ML pipelines).
+
+*When Not to Use:*  
+- You only need one row per group (prefer `.agg()` for efficiency).  
+- The transformation cannot be vectorised and runs slowly row-by-row—then consider `.apply()` as a last resort.
+
+==== Quick rule of thumb
+• `.agg()` = “reduce” →  shrinks each group to one row (or one scalar).  
+• `.transform()` = “broadcast” →  keeps original shape; every input row re-appears in the output.  
+If your custom function cannot satisfy either contract, fall back to `.apply()` (it has no shape promise but is slower). [[1]]
+
+
+
+
+=== df.groupby()
+.Group data by one or more keys, then apply aggregations or transformations.
+[source,python]
+----
+import pandas as pd
+
+df = pd.DataFrame({
+    "Team"  : ["A", "A", "B", "B"],
+    "Points": [10, 12, 7,  9 ],
+    "Assists": [5, 7, 3, 4]
+})
+
+# 1️⃣  Global mean over all rows --------------
+x_means = df["Points"].mean()
+print("Global mean:", x_means)
+
+# 2️⃣  Mean *per team* ------------------------
+x_means_grouped = df.groupby("Team")["Points"].mean()
+print("\nMean per team:\n", x_means_grouped)
+----
+.Output:
+[source,python]
+----
+Global mean: 9.5
+
+Mean per team:
+Team
+A    11.0
+B     8.0
+Name: Points, dtype: float64
+----
+
+.How it works:
+1. `df["Points"].mean()` looks at the entire column—one number out.
+2. `df.groupby("Team")` splits the frame into two sub-tables (Team A, Team B).  
+   Calling `.mean()` on the `Points` column is then applied to each piece **before** the results are combined.
+
+*When to Use:*  
+- Any time you need per-group statistics: sums, means, counts, custom lambdas, etc.  
+- Preparing features such as “player’s points minus team average.”  
+- Rolling up data for reports or dashboards.
+
+*When Not to Use:*  
+- When your operation does **not** depend on grouping (the plain column method is faster).  
+- When you only need element-wise transforms that keep the original shape—use `.transform()` instead.  
+
+.Tips:
+• Add `as_index=False` if you want the group labels to become a normal column rather than the index.  
+• Chain multiple aggregates with `.agg()` for concise, named output:  
+  `df.groupby("Team").agg(mean_pts=("Points","mean"), max_ast=("Assists","max"))`  
+• Turn off automatic sorting with `sort=False` to keep original row order.  
 
