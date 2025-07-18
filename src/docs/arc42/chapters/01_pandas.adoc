@@ -231,15 +231,15 @@ Name: Population, dtype: int64
 .Fast label-based single value access.
 [source,python]
 ----
-import pandas as pd
-
-df = pd.DataFrame({
-    'Key': ['item1', 'item2'],
-    'Price': [10.99, 8.75]
-})
-
-val = df.at[1, 'Price']
-print(val)
+selected_idx = 1
+val = df.at[selected_idx, 'City']  # Accessing the Population of London using label
+val2 = df.at[selected_idx, 'Population']  # Accessing the Population of London using label
+print(val, val2)
+----
+.Output:
+[source,python]
+----
+London 8982000
 ----
 *When to Use:*  
 - Optimized for retrieving a single value at known row and column labels.
@@ -247,19 +247,20 @@ print(val)
 *When Not to Use:*  
 - Selecting multiple rows or columns at once.
 
+
 ==== .iat[row, col]
+
 .Fast index-based single value access.
 [source,python]
 ----
-import pandas as pd
+london_pop = df.iat[1, 1]  # Accessing the Population of London using index
+print(london_pop)  
+----
 
-df = pd.DataFrame({
-    'Key': ['item1', 'item2'],
-    'Price': [10.99, 8.75]
-})
-
-val = df.iat[1, 1]
-print(val)
+.Output:
+[source,python]
+----
+8982000
 ----
 *When to Use:*  
 - Optimized for retrieving a single value at known row and column positions.
