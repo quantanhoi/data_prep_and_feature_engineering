@@ -591,3 +591,134 @@ Name: Points, dtype: float64
   `df.groupby("Team").agg(mean_pts=("Points","mean"), max_ast=("Assists","max"))`  
 • Turn off automatic sorting with `sort=False` to keep original row order.  
 
+
+
+=== Concatenating DataFrames
+==== pd.concat()
+.Concatenate (stack) Series/DataFrames vertically or horizontally.
+[source,python]
+----
+import pandas as pd
+
+df1 = pd.DataFrame({"id": [1, 2], "A": ["A0", "A1"]})
+df2 = pd.DataFrame({"id": [4, 5], "A": ["A2", "A3"]})
+
+# 1️⃣  Vertikales Stapeln  (axis=0 ist Standard)
+vstack = pd.concat([df1, df2], axis=0, ignore_index=True)
+print(vstack)
+
+# 2️⃣  Horizontales Stapeln  (axis=1)
+hstack = pd.concat([df1.set_index("id"), df2.set_index("id")], axis=1,
+                   join="outer")
+print(hstack)
+----
+.Output:
+[source,python]
+----
+   id   A
+0   1  A0
+1   2  A1
+2   4  A2
+3   5  A3
+      A    A
+id          
+1    A0  NaN
+2    A1  NaN
+4   NaN   A2
+5   NaN   A3
+----
+
+*Performance-Warnung – nicht Zeile-für-Zeile konkatenieren*  
+`pd.concat()` muss bei jedem Aufruf kopieren. In einer Schleife entsteht so
+viel unnötige Arbeit:
+
+[source,python]
+----
+# ❌ langsam
+out = pd.DataFrame()
+for row in rows:
+    out = pd.concat([out, row.to_frame().T])
+----
+
+Besser: erst sammeln, dann einmal konkatenieren:
+
+[source,python]
+----
+frames = [row.to_frame().T for row in rows]   # billig
+out = pd.concat(frames, ignore_index=True)    # nur eine Kopie
+----
+
+*When to Use:*  
+- Stapeln von DataFrames mit gleichen Spalten (axis=0) oder passenden
+  Indizes (axis=1).  
+- Mehrere neue Zeilen in einem Rutsch anhängen.
+
+*When Not to Use:*  
+- Schlüsselbasierte Joins → `pd.merge()`.  
+- Live-Streaming einzelner Zeilen → lieber Liste puffern oder direkt DB.
+
+
+
+
+==== pd.merge()
+.SQL-ähnliche Joins (inner, left, right, outer, cross).
+[source,python]
+----
+import pandas as pd
+
+left  = pd.DataFrame({"id": [1, 2, 3], "points": [10, 20, 30]})
+right = pd.DataFrame({"id": [2, 3, 4], "grade":  ["B", "A", "C"]})
+
+# 1️⃣  Inner Join – nur übereinstimmende ids
+inner = pd.merge(left, right, on="id")
+print(inner)
+
+# 2️⃣  Left Join – alle Zeilen aus left behalten
+left_join = pd.merge(left, right, on="id", how="left")
+print(left_join)
+
+# 3️⃣  Kreuzprodukt (cross)
+cross = pd.merge(left, right, how="cross")
+print(cross.head())   # 9 Zeilen = 3×3
+----
+.Output (gekürzt):
+[source,python]
+----
+    id  points grade
+0   2      20     B
+1   3      30     A
+
+    id  points grade
+0   1      10   NaN
+1   2      20     B
+2   3      30     A
+
+    id_x  points  id_y grade
+0     1      10     2     B
+1     1      10     3     A
+2     1      10     4     C
+3     2      20     2     B
+4     2      20     3     A
+----
+
+
+*Kurzübersicht how=*  
+inner – Schnittmenge (Standard)  
+left  – wie SQL LEFT JOIN  
+right – RIGHT JOIN  
+outer – vollständige Vereinigung  
+cross – kartesisches Produkt
+
+*When to Use:*  
+- Tabellen über Schlüsselspalten kombinieren.  
+- Dimensionstabellen anhängen, Many-to-Many-Joins.
+
+*When Not to Use:*  
+- Einfaches Reihen/Spalten-Anfügen → `pd.concat()`.  
+- Joins nur über Index → `DataFrame.join()` ist oft klarer.
+
+.Tipps  
+* `indicator=True` fügt Spalte `_merge` mit Herkunftsinfo hinzu.  
+* Doppelte Spaltennamen per `suffixes=('_l', '_r')` auflösen.  
+* Für zeitnahe “nearest” Joins gibt es `pd.merge_asof()`.
+
