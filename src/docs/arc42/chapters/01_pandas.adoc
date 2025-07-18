@@ -267,3 +267,186 @@ print(london_pop)
 
 *When Not to Use:*  
 - Selecting by label or for retrieving multiple values.
+
+
+
+
+==== Boolean Masks
+.Boolean masks are a powerful feature in pandas that allow you to filter DataFrames based on specific conditions.
+[source,python]
+----
+mask = df['Population'] >= 3000000
+filtered_df = df[mask]
+print(filtered_df.iloc[::, ::]) # Display all columns, or just use head() to show the first few rows
+----
+.Output:
+[source,python]
+----
+       City  Population
+1   London      8982000
+2   Berlin      3645000
+----
+*When to Use:*  
+- When you need to filter data based on specific conditions.
+
+*When Not to Use:*  
+- For simple row/column selection; use .loc or .iloc instead.
+
+.One-liner boolean mask:
+[source,python]
+----
+filtered_df = df[df['Population'].ge(8_982_000)]   # .ge == “>=”
+----
+
+
+=== Missing Values
+==== df.dropna()
+.Removes rows (or columns) that contain missing values.
+[source,python]
+----
+import pandas as pd
+import numpy as np
+
+df = pd.DataFrame({
+    'Name' : ['Alice', 'Bob',   np.nan, 'Diana', np.nan],
+    'Score': [  88 ,   np.nan,   79  ,   90  , np.nan ], 
+    'City' : [np.nan, np.nan, np.nan, np.nan, np.nan],
+})
+
+print("Original DataFrame:", df.iloc[::,::], sep='\n')
+
+# 1️⃣  Drop any row that has at least one NaN
+clean_rows_any = df.dropna()    #default is axis=rows, how ='any'
+print('clean rows: ',clean_rows_any, sep='\n')  #this will return empty dataframe because all rows have at least one NaN
+
+clean_rows_all = df.dropna(how='all')   # this will drop rows only if all values are NaN
+print('clean rows all: ',clean_rows_all, sep='\n')
+
+
+# 2️⃣  Drop columns that are all NaN
+clean_cols = df.dropna(axis='columns', how='all')
+print('clean_col', clean_cols, sep='\n')
+----
+.Output:
+[source,python]
+----
+Original DataFrame:
+    Name  Score  City
+0  Alice   88.0   NaN
+1    Bob    NaN   NaN
+2    NaN   79.0   NaN
+3  Diana   90.0   NaN
+4    NaN    NaN   NaN
+clean rows: 
+Empty DataFrame
+Columns: [Name, Score, City]
+Index: []
+clean rows all: 
+    Name  Score  City
+0  Alice   88.0   NaN
+1    Bob    NaN   NaN
+2    NaN   79.0   NaN
+3  Diana   90.0   NaN
+clean_col
+    Name  Score
+0  Alice   88.0
+1    Bob    NaN
+2    NaN   79.0
+3  Diana   90.0
+4    NaN    NaN
+----
+*When to Use:*  
+- You truly want to discard incomplete records (e.g., training a model that cannot handle NaNs).  
+- Columns are completely empty and add no information.
+
+*When Not to Use:*  
+- The loss of data would harm analysis or create bias.  
+- You only need to ignore NaNs temporarily—consider `.fillna()` or model-side handling instead.
+
+
+
+==== df.fillna()
+.Replaces missing values with a specified constant or computed statistic.
+[source,python]
+----
+import pandas as pd
+import numpy as np
+
+df = pd.DataFrame({
+    'Product': ['A', 'B', 'C', 'D'],
+    'Price'  : [10.5, np.nan, 12.0, np.nan]
+})
+
+# 1️⃣  Fill with a scalar
+df_fixed = df.fillna(0)
+print(df_fixed)
+
+# 2️⃣  Fill with a column mean (common in feature engineering)
+mean_price = df['Price'].mean()
+df_mean = df.assign(Price=df['Price'].fillna(mean_price))
+print(df_mean)
+----
+.Output:
+[source,python]
+----
+  Product  Price
+0       A   10.5
+1       B    0.0
+2       C   12.0
+3       D    0.0
+
+  Product  Price
+0       A  10.50
+1       B  11.25
+2       C  12.00
+3       D  11.25
+----
+*When to Use:*  
+- Keeping the row is more valuable than the exact value (e.g., imputing with mean/median).  
+- Preparing data for ML algorithms that require complete numeric input.
+
+*When Not to Use:*  
+- The placeholder would distort downstream statistics (e.g., filling with 0 when 0 is a valid, meaningful value).  
+- Missingness itself carries information—you might add a “_missing” indicator instead.
+
+
+
+==== df.isna()
+.Returns a Boolean mask indicating missing values (NaN or None).
+[source,python]
+----
+import pandas as pd
+import numpy as np
+
+df = pd.DataFrame({
+    'City'      : ['Paris', 'London', None,   'Berlin'],
+    'Population': [2_148_000, np.nan, 3_645_000, 3_748_000]
+})
+
+mask = df.isna()
+print(mask)
+
+# Example: count missing cells per column
+missing_per_col = mask.sum()
+print(missing_per_col)
+----
+.Output:
+[source,python]
+----
+    City  Population
+0  False       False
+1  False        True
+2   True       False
+3  False       False
+
+City          1
+Population    1
+dtype: int64
+----
+*When to Use:*  
+- Building custom boolean masks for advanced filtering (e.g., `df[df['Population'].isna()]`).  
+- Quick diagnostics or QA checks (`df.isna().sum()` for a nulls overview).
+
+*When Not to Use:*  
+- Situations requiring the *inverse*—in that case use `.notna()` for readability.  
+
