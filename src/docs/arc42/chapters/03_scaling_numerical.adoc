@@ -14,7 +14,7 @@ ifndef::imagesdir[:imagesdir: ../../images]
 == Scaling Numerical
 This document defines and illustrates concepts around Scaling and Normalizing. Use it as a quick reference when preparing numeric data for machine-learning pipelines.
 
-.Categorical Data and Numerical Data
+.Categorical Data vs Numerical Data
 There are two types of data
 
 Categorical Data:: Data that reflect qualitative characteristics
@@ -117,6 +117,11 @@ x_scaled = (2*880 - 39320 - 2 ) / (32320 - 2) = -0.95553385
 ----
 Which is a correct scaled number in range [-1, 1]
 
+
+
+
+
+
 ==== Clipping + Min-Max
 Clipping with Min-Max scaling is a data preprocessing technique that combines outlier handling with feature scaling. This approach addresses the limitations of standard Min-Max scaling when dealing with datasets containing extreme values or outliers.
 
@@ -168,7 +173,117 @@ This technique is particularly useful when:
 * The outliers represent valid but extreme cases (not errors)
 * You're working with algorithms sensitive to feature scales (e.g., neural networks, SVM)
 
+.Example adding an extreme outlier then clipping
+[source,python]
+----
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+df = pd.read_csv('./housing.csv')
+print(df.head(2))
+----
 
+.Output:
+[source,python]
+----
+   longitude  latitude  housing_median_age  total_rooms  total_bedrooms  \
+0    -122.23     37.88                41.0        880.0           129.0   
+1    -122.22     37.86                21.0       7099.0          1106.0   
+
+   population  households  median_income  median_house_value ocean_proximity  
+0       322.0       126.0         8.3252            452600.0        NEAR BAY  
+1      2401.0      1138.0         8.3014            358500.0        NEAR BAY  
+----
+
+[source,python]
+----
+scaler = MinMaxScaler(feature_range=(-1, 1), clip=True) 
+# Nothing changes because the training data define the min/max themselves, 
+#so every scaled value is already inside [-1 , 1]
+df['total_rooms_scaled'] = scaler.fit_transform(df[['total_rooms']])
+print(df.head(2))
+----
+.Output:
+[source,python]
+----
+   longitude  latitude  housing_median_age  total_rooms  total_bedrooms  \
+0    -122.23     37.88                41.0        880.0           129.0   
+1    -122.22     37.86                21.0       7099.0          1106.0   
+
+   population  households  median_income  median_house_value ocean_proximity  \
+0       322.0       126.0         8.3252            452600.0        NEAR BAY   
+1      2401.0      1138.0         8.3014            358500.0        NEAR BAY   
+
+   total_rooms_scaled  
+0           -0.955339  
+1           -0.638995  
+----
+
+[source,python]
+----
+# simulate a new observation with an outlier
+new = pd.DataFrame({'total_rooms': [999_999]})
+print(new.tail())
+print("With clip=True :", scaler.transform(new))   # → exactly 1
+scaler.clip = False                                # turn off
+print("With clip=False:", scaler.transform(new))   # → >1, outside the range
+----
+.Output:
+[source,python]
+----
+total_rooms
+0       999999
+With clip=True : [[1.]]
+With clip=False: [[49.86713465]]
+----
+The output shows that with clipping enabled, the extreme value of 999,999 is transformed to exactly 1, while without clipping, it exceeds the range and becomes approximately 49.87. However, if the extreme value is scaled to 1 or -1, then the other values are compressed into a very small range, which is not desirable.
+
+
+==== Clipping within the dataset using np.clip
+.With np.clip you manually choose the reasonable lower/ upper bounds, then truncate them before any scaler see them
+[source,python]
+----
+import numpy as np
+# Clip total_rooms to be between 1,000 and 6000
+df['total_rooms'] = np.clip(df['total_rooms'], 1000, 6000)
+print(df['total_rooms'].describe())
+----
+.Output:
+[source,python]
+----
+count    20640.000000
+mean      2502.360514
+std       1386.068526
+min       1000.000000
+25%       1447.750000
+50%       2127.000000
+75%       3148.000000
+max       6000.000000
+Name: total_rooms, dtype: float64
+----
+.Then you can apply the Min-Max scaler
+[source,python]
+----
+scaler = MinMaxScaler(feature_range=(-1, 1), clip=True) 
+# Nothing changes because the training data define the min/max themselves, 
+#so every scaled value is already inside [-1 , 1]
+df['total_rooms_scaled'] = scaler.fit_transform(df[['total_rooms']])
+print(df.head(2))
+----
+.Output:
+[source,python]
+----
+longitude  latitude  housing_median_age  total_rooms  total_bedrooms  \
+0    -122.23     37.88                41.0       1000.0           129.0   
+1    -122.22     37.86                21.0       6000.0          1106.0   
+
+   population  households  median_income  median_house_value ocean_proximity  \
+0       322.0       126.0         8.3252            452600.0        NEAR BAY   
+1      2401.0      1138.0         8.3014            358500.0        NEAR BAY   
+
+   total_rooms_scaled  
+0                -1.0  
+1                 1.0
+----
 
 .Conclusion
 Clipping with Min-Max scaling provides a robust approach to feature scaling when dealing with outliers. By setting reasonable bounds before scaling, we ensure that extreme values don't compress the majority of our data into a small range, while still maintaining the desired output range of [-1, 1].
