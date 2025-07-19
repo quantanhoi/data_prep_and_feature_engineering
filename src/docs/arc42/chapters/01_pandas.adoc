@@ -722,3 +722,397 @@ cross – kartesisches Produkt
 * Doppelte Spaltennamen per `suffixes=('_l', '_r')` auflösen.  
 * Für zeitnahe “nearest” Joins gibt es `pd.merge_asof()`.
 
+
+
+==== melt()
+.Unpivot → macht aus einer breiten Tabelle eine lange, schmale.
+[source,python]
+----
+import pandas as pd
+
+df = pd.DataFrame({
+    "id": [1, 2],
+    "Jan": [11, 12],
+    "Feb": [21, 22],
+    "Mar": [31, 32]
+})
+print(df)
+# Klassische Anwendung: Monate stehen als Spalten, gehören aber in Zeilen
+long = pd.melt(
+    df,
+    id_vars="id",                 # bleibt stehen
+    value_vars=df.columns[1:],  # columns which should be melted
+    # or value_vars=["Jan", "Feb", "Mar"],  if you want to specify manually
+    var_name="Monat",             # neue Spalte mit den alten Spalten-Labels
+    value_name="Umsatz"           # neue Spalte mit den Werten
+)
+print(long)
+----
+.Output:
+[source,python]
+----
+   id  Jan  Feb  Mar
+0   1   11   21   31
+1   2   12   22   32
+   id Monat  Umsatz
+0   1   Jan      11
+1   2   Jan      12
+2   1   Feb      21
+3   2   Feb      22
+4   1   Mar      31
+5   2   Mar      32
+----
+*When to Use:*  
+- Spalten sind eigentlich Ausprägungen einer Variablen (z. B. Monate, Messpunkte).  
+- Vorbereitung für `groupby`, Zeitreihen-Tools oder ggplot/Seaborn (tall/long-Format).
+
+*When Not to Use:*  
+- Wenn Spalten echte verschiedene Variablen bleiben sollen.  
+- Datensatz ist bereits im Long-Format.
+
+
+
+
+==== df.stack()
+.Pivots the *column axis* into the *row index*; useful even with a single-level column index.
+[source,python]
+----
+# data.csv
+# Duration,Pulse,Maxpulse,Calories
+# 60,110,130,409.1
+# 60,117,145,479.0
+# 60,103,135,340.0
+# 45,109,175,282.4
+# 45,117,148,406.0
+
+import pandas as pd
+df = pd.read_csv("data.csv")
+
+# 1️⃣  Stack the (only) column level ↓ into the index
+long = df.stack()          # returns a Series because no columns remain
+print(long.to_string())    # show everything without truncation
+----
+.Output:
+[source,python]
+----
+0  Duration     60.0
+   Pulse       110.0
+   Maxpulse    130.0
+   Calories    409.1
+1  Duration     60.0
+   Pulse       117.0
+   Maxpulse    145.0
+   Calories    479.0
+2  Duration     60.0
+   Pulse       103.0
+   Maxpulse    135.0
+   Calories    340.0
+...
+dtype: float64
+----
+
+.How it works
+* The original columns (`Duration`, `Pulse`, `Maxpulse`, `Calories`) form a **single** column level.
+* `stack()` moves that level onto the row axis, creating a *MultiIndex* Series whose index is `(row-number, former-column-label)`.
+* Because no column levels are left, pandas returns a `Series`.  
+  If at least one column level remains (true MultiIndex columns), the result would be a `DataFrame`.
+
+*When to Use:*  
+- Quickly convert a *wide* table to a *long* Series without needing a multi-level column index.  
+- Feed “tidy” tools that expect a single measurement per row (e.g., seaborn, `groupby`, `agg`).  
+
+*When Not to Use:*  
+- If columns already carry **meaningful levels** (e.g., `("Metric","Month")`) and you only want to pivot one of them—then keep the MultiIndex and specify `stack(level='Month')`.  
+- If you merely need to reshape by **row index** → use `unstack()` or `pivot()` instead.
+
+.Tips  
+* Call `long.unstack()` to reverse the operation (round-trip check).  
+* After stacking, `long.reset_index()` will turn the MultiIndex into regular columns for easier CSV export.  
+* Remember: with only one column level, `stack()` always yields a Series; multi-level columns yield a DataFrame.  
+
+
+
+==== df.pivot()  – reshape **without** aggregation
+.Creates a “spread-out” table; every unique combination of index/column must be unique.
+[source,python]
+----
+import pandas as pd
+df = pd.DataFrame({
+    "id"      : [1, 1, 2, 2, 3, 3],
+    "category": ["A", "B", "A", "B", "A", "B"],
+    "value"   : [10, 20, 15, 25, 12, 18]
+})
+print(df)
+# 1️⃣  Put category values into separate columns (wide format)
+wide = df.pivot(index="id",        # rows
+                columns="category",# new columns come from here
+                values="value")    # what goes into the cells
+print(wide)
+----
+.Output:
+[source,python]
+----
+   id category  value
+0   1        A     10
+1   1        B     20
+2   2        A     15
+3   2        B     25
+4   3        A     12
+5   3        B     18
+category   A   B
+id              
+1         10  20
+2         15  25
+3         12  18
+----
+*Key points*
+* Every (id, category) pair must appear **once** in `df`; duplicates raise `ValueError`.
+* `pivot()` performs **no** aggregation – it just rearranges.
+
+*When to use:*  
+- Your data are already unique per key pair (e.g. one measurement per day and sensor).  
+- You want a quick wide-format DataFrame for plotting or simple math.
+
+*When not to use:*  
+- There are duplicates – switch to `pivot_table()` and pick an aggregation.
+
+
+
+==== pd.pivot_table()  – pivot **with** aggregation
+.Like a spreadsheet pivot table: duplicates are allowed, aggregated with `aggfunc`.
+[source,python]
+----
+# ─── same data but with duplicates ─────────────────────
+df_dup = pd.DataFrame({
+    "id"      : [1, 1, 1, 2, 2, 3],
+    "category": ["A", "A", "B", "A", "B", "B"],
+    "value"   : [10, 5, 20, 15, 25, 18]
+})
+
+# 1️⃣  Sum up duplicate rows while pivoting
+pivot_sum = pd.pivot_table(
+    df_dup,
+    index   ="id",
+    columns ="category",
+    values  ="value",
+    aggfunc ="sum"          # any NumPy / pandas reduction works
+)
+print(pivot_sum)
+----
+.Output:
+[source,python]
+----
+category   A   B
+id              
+1         15  20
+2         15  25
+3        NaN  18
+----
+*Key points*
+* Accepts duplicates – they’re collapsed with `aggfunc` (default is **mean**).  
+* Missing combinations become `NaN` (id 3 has no ‘A’).
+
+.Variations
+• Multiple aggregations:  
+  `aggfunc = {"value": ["sum", "count"]}` → MultiIndex columns  
+• Add totals like Excel: `margins=True` (adds “All” row/col).  
+• Pivot on many columns: `index=["id","week"]`, `columns=["category","subcat"]`.
+
+*When to use:*  
+- You need summary numbers (sum, mean, count, etc.) while reshaping.  
+- Data contain duplicates or you explicitly want aggregation (e.g., daily sales per store).
+
+*When not to use:*  
+- The key pairs are unique and you just need a reshape – plain `pivot()` is faster and simpler.
+
+
+==== Difference between pivot() and melt()
+.Short version:
+* melt = “un-pivot” → Wide → Long.
+* pivot = “re-pivot” → Long → Wide.
+
+.Key Contrast:
+1. Direction:
+    - melt turns several columns into two: variable + value
+    - pivot takes one variable column and turns its distinct labels into real columns
+
+2. Uniqueness vs duplicates:
+    - melt never complains about duplicates; it just stacks rows.
+    - pivot raises ValueError if (index, column) is seen twice. Use pivot_table when duplicates exist because it can aggregate.
+
+3. Aggregation:
+    - melt does not aggregate; it just reshapes.
+    - pivot requires unique pairs, while pivot_table aggregates duplicates.
+
+
+=== Tidy Data
+
+==== Error Type 1 “Headers are actually data values”
+Example:
+[source,python]
+----
+           name  treatmenta  treatmentb
+0    John Smith         NaN           2
+1      Jane Doe        16.0          11
+2  Mary Johnson         3.0           1
+----
+.Why is it a problem?
+
+* The treatment name (a, b) is a variable, but it sits in the column headers.
+* Each patient appears once per treatment, so one real observation is split across two columns.
+
+.Fix:
+Un-pivot / melt so the treatment goes into its own column and the numeric result into another:
+[source,python]
+----
+import pandas as pd
+import numpy as np
+
+# Create the original DataFrame (headers are actually data values)
+df = pd.DataFrame({
+    'name': ['John Smith', 'Jane Doe', 'Mary Johnson'],
+    'treatmenta': [np.nan, 16, 3],
+    'treatmentb': [2, 11, 1]
+})
+# Unpivot/melt so the treatment goes into its own column and the result into another
+tidy = (
+    df.melt(id_vars='name', var_name='trt', value_name='result')
+)
+
+print("\nTidy DataFrame:")
+print(tidy)
+----
+
+.Output:
+[source,python] 
+----
+Tidy DataFrame:
+           name         trt  result
+0    John Smith  treatmenta     NaN
+1      Jane Doe  treatmenta    16.0
+2  Mary Johnson  treatmenta     3.0
+3    John Smith  treatmentb     2.0
+4      Jane Doe  treatmentb    11.0
+5  Mary Johnson  treatmentb     1.0
+----
+
+
+
+==== Error Type 2  – “Several variables crammed into one column”
+.Example:
+[source,python] 
+----
+machine   date     key   value
+M       1/1/22    tmin   15.00
+M       1/1/22    tmax   17.00
+----
+
+.Why is it a problem?
+* Column key stores which variable the number belongs to (tmin vs tmax).
+* Each physical record now uses two rows to hold one logical observation (min + max temp).
+
+.Fix:
+Pivot those key/value rows back out into separate columns:
+[source,python]
+----
+import pandas as pd
+
+# Create the original DataFrame (key column holds variable names)
+df = pd.DataFrame({
+    'machine': ['M', 'M'],
+    'date': ['1/1/22', '1/1/22'],
+    'key': ['tmin', 'tmax'],
+    'value': [15.00, 17.00]
+})
+
+print("Original DataFrame:")
+print(df)
+
+# Pivot the key/value rows back out into separate columns
+wide = (
+    df.pivot(index=['machine', 'date'], columns='key', values='value')
+      .reset_index()  # optional, removes MultiIndex
+)
+
+print("\nWide DataFrame (tidy):")
+print(wide)
+----
+
+.Output:
+[source,python]
+----
+Original DataFrame:
+  machine    date   key  value
+0       M  1/1/22  tmin   15.0
+1       M  1/1/22  tmax   17.0
+
+Wide DataFrame (tidy):
+key machine    date  tmax  tmin
+0         M  1/1/22  17.0  15.0
+----
+
+
+==== Error Type 4 (Surprise? there is no 3) -  “Each observation spread over many rows that need aggregation”
+.Example:
+[source,python]
+----
+Store  Date     TransactionID   Amount
+1    1/3/22      kdjvi           787.00
+1    1/3/22      kjdfj          1887.40
+2    1/3/22      geoku          1148.30
+----
+
+.Why is it a problem?
+* For analysis you care about the monthly revenue per store, not each receipt line; the granularity is too fine.
+
+.Fix:
+Aggregate (group + sum) then drop the now-irrelevant columns:
+[source, python]
+----
+import pandas as pd
+
+# Create the original DataFrame (each transaction is a row)
+df = pd.DataFrame({
+    'Store': [1, 1, 2],
+    'Date': ['1/3/22', '1/3/22', '1/3/22'],
+    'TransactionID': ['kdjvi', 'kjdfj', 'geoku'],
+    'Amount': [787.00, 1887.40, 1148.30]
+})
+
+print("Original DataFrame:")
+print(df)
+
+# Aggregate: group by Store and Month, sum Amount
+tidy = (
+    df.assign(Month=pd.to_datetime(df['Date']).dt.to_period('M'))
+      .groupby(['Store', 'Month'], as_index=False)['Amount']
+      .sum()
+)
+
+print("\nTidy DataFrame (monthly revenue per store):")
+print(tidy)
+----
+
+.Output:
+[source,python]
+----
+Original DataFrame:
+    Store    Date TransactionID  Amount
+0      1  1/3/22         kdjvi   787.0
+1      1  1/3/22         kjdfj  1887.4
+2      2  1/3/22         geoku  1148.3
+
+Tidy DataFrame (monthly revenue per store):
+    Store    Month  Amount
+0      1  2022-01  2674.4
+1      2  2022-01  1148.3
+----
+
+
+
+==== Summary
+Summary cheat-sheet
+* Headers-as-data → melt() (longer).
+* Many variables in one column → pivot() / pivot_table() (wider).
+* Too-fine granularity / repeated rows → groupby(...).agg() to collapse.
+
