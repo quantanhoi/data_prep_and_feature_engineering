@@ -60,9 +60,9 @@ Unscaled data can lead to:
 
 Most scaling method aim to map feature around *[-1 , 1]*, or to a zero-mean/unit-variance bell shape
 
-=== Linear Scaling Methods
 
-==== Min-Max Scaling
+
+=== Min-Max Scaling
 [source,python]
 ----
 x_scaled = (2*x - x_max - x_min)/(x_max - x_min) # maps to [-1, 1]
@@ -122,7 +122,7 @@ Which is a correct scaled number in range [-1, 1]
 
 
 
-==== Clipping + Min-Max
+=== Clipping + Min-Max
 Clipping with Min-Max scaling is a data preprocessing technique that combines outlier handling with feature scaling. This approach addresses the limitations of standard Min-Max scaling when dealing with datasets containing extreme values or outliers.
 
 .Clipping (Clamping)
@@ -238,7 +238,7 @@ With clip=False: [[49.86713465]]
 The output shows that with clipping enabled, the extreme value of 999,999 is transformed to exactly 1, while without clipping, it exceeds the range and becomes approximately 49.87. However, if the extreme value is scaled to 1 or -1, then the other values are compressed into a very small range, which is not desirable.
 
 
-==== Clipping within the dataset using np.clip
+=== Clipping within the dataset using np.clip
 .With np.clip you manually choose the reasonable lower/ upper bounds, then truncate them before any scaler see them
 [source,python]
 ----
@@ -293,12 +293,14 @@ Clipping with Min-Max scaling provides a robust approach to feature scaling when
 
 
 
-==== Z-Score Normalization
+=== Z-Score Normalization
 Z-score normalization, also known as standardization or standard scaling, is a fundamental data preprocessing technique in machine learning and statistics. It transforms data to have a mean of zero and a standard deviation of one, making different features comparable regardless of their original scales.
 
 .What is Z-Score Normalization?
 
 Z-score normalization is a scaling technique that transforms each data point by subtracting the mean and dividing by the standard deviation. This process centers the data around zero and scales it based on the data's spread.
+
+It is used to transform data into a standard normal distribution, ensuring that all features are on the same scale. This process helps to avoid the dominance of certain features over others due to differences in their scales, which can significantly impact the performance of machine learning models.
 
 
 .The Z-Score Formula
@@ -338,7 +340,7 @@ After Z-score normalization:
 * **Positive Z-scores**: Values above the mean
 * **Negative Z-scores**: Values below the mean
 * **Magnitude**: Indicates how many standard deviations away from the mean
-image:z_score_housing.png[]
+
 
 
 Advantages of Z-Score Normalization::
@@ -366,7 +368,38 @@ Z-score normalization is particularly effective when:
 * Using distance-based algorithms (e.g., k-NN, k-Means, SVM)
 * The data approximately follows a normal distribution
 
+.Example of Z-Score Normalization
+Again with housing data
+[source,python]
+----
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+# 2) Z-score normalise *total_rooms*
+scaler = StandardScaler()
+df['total_rooms_z'] = scaler.fit_transform(df[['total_rooms']])  # (x-µ)/σ
+----
 
+Then plot the results
+[source,python]
+----
+# 3) plot — two histograms side-by-side
+fig, ax = plt.subplots(1, 2, figsize=(10, 4))
+# before
+ax[0].hist(df['total_rooms'], bins=100, color='blue', edgecolor='black')
+ax[0].set_title('total_rooms  (raw)')
+ax[0].set_xlabel('rooms')
+ax[0].set_ylabel('count')
+
+# after
+ax[1].hist(df['total_rooms_z'], bins=100, color='orange', edgecolor='black')
+ax[1].set_title('total_rooms  (z-score)')
+ax[1].set_xlabel('z value')
+ax[1].set_ylabel('count')
+
+plt.tight_layout()
+plt.show()
+----
+image:z_score_housing.png[]
 
 .Conclusion
 
@@ -381,7 +414,26 @@ While it has limitations (unbounded range, sensitivity to outliers), Z-score nor
 
 
 
-==== Winsorizing
+=== Z-score normalization vs min-max scaling
+.Outliers still matter
+Unlike min-max scaling, z-score does not squash every point into a hard bound; values more than a few σ from the mean remain out there. If you explicitly set the axis limits wider or call hist(..., range=(-10,10)) you will see those tails.
+.Min-Max scaling – pick it when
+* You know the feature has a hard, meaningful bound (e.g. percentages 0–100, sensor range 0-1023).
+* The model downstream explicitly expects inputs inside a fixed interval – typical for ‑ neural networks with sigmoid / tanh activations,
+** image pipelines that were trained on 0-1 pixels.
+* The distribution is fairly uniform and you can tolerate that a single extreme value will squeeze the rest into a tiny band, or you have already clipped / winsorised those outliers.
+Min-Max puts every training sample between the chosen limits, so zeros stay zero and all features end on an identical scale.
+
+.Z-score (standard) scaling – pick it when
+* The feature is roughly bell-shaped or at least single-peaked, so mean ± σ describes it sensibly.
+* You want some robustness to rare extremes: they do not drag the whole bulk into 0-0.1 the way Min-Max would.
+* Algorithms use distance, dot products or gradient descent (k-NN, SVM, PCA, regressions, neural nets): centring at 0 and giving unit variance makes optimisation easier and the loss landscape better conditioned.
+* Absolute scale is unimportant; relative deviation from the mean is what matters (e.g. “how many σ above normal is this temperature?”).
+
+
+
+
+=== Winsorizing
 Winsorizing is a statistical technique used to handle outliers in datasets by replacing extreme values with less extreme values at specified percentiles. Named after biostatistician Charles P. Winsor, this method provides a robust alternative to **simply removing outliers**, preserving the sample size while reducing the impact of extreme observations.
 
 The process of limiting extreme values in statistical data by replacing outliers with values at specified percentiles. Unlike trimming, winsorizing preserves all data points by transforming rather than removing them.
@@ -422,6 +474,62 @@ The threshold values (typically percentiles) used to determine which observation
 4. **Preserve Sample Size**: All original data points remain, but extreme values are "pulled in"
 
 image:winsorizing.png[]
+
+.Example
+[source,python]
+----
+import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+
+# ---- 1. pick a column ----------------------------------------------------
+col = 'total_rooms'
+train = df[[col]].copy()                        # fit only on training split!
+
+# ---- 2. derive empirical cut-offs ----------------------------------------
+lo, hi = train[col].quantile([0.10, 0.90])      # 10th / 90th pct
+
+# ---- 3. winsorize (= clip to those cut-offs) -----------------------------
+train[col + '_w'] = train[col].clip(lo, hi)
+
+# ---- 4. (optional) scale the capped data to [-1, 1] ----------------------
+scaler = MinMaxScaler(feature_range=(-1, 1))
+train[col + '_scaled'] = scaler.fit_transform(train[[col + '_w']])
+
+print(train.head(5))
+----
+.Output:
+[source,python]
+----
+total_rooms  total_rooms_w  total_rooms_scaled
+0        880.0          941.0           -1.000000
+1       7099.0         4651.5            1.000000
+2       1467.0         1467.0           -0.716480
+3       1274.0         1274.0           -0.820509
+4       1627.0         1627.0           -0.630239
+----
+.Or define a function to apply the winsorization
+[source,python]
+----
+# ---- 5. reuse the same transform on any future data ----------------------
+def apply_winsor_scale(new_df):
+    new_df = new_df.copy()
+    new_df[col + '_w']      = new_df[col].clip(lo, hi)
+    new_df[col + '_scaled'] = scaler.transform(new_df[[col + '_w']])
+    return new_df
+
+w_df = apply_winsor_scale(df['total_rooms'].copy().to_frame())
+print(w_df.head(5))
+----
+.Output:
+[source,python]
+----
+total_rooms  total_rooms_w  total_rooms_scaled
+0        880.0          941.0           -1.000000
+1       7099.0         4651.5            1.000000
+2       1467.0         1467.0           -0.716480
+3       1274.0         1274.0           -0.820509
+4       1627.0         1627.0           -0.630239
+----
 
 
 
@@ -466,7 +574,7 @@ The key to successful winsorizing lies in thoughtful threshold selection, carefu
 
 
 
-==== Boxcox
+=== Boxcox
 The Box-Cox transformation is a powerful statistical technique that transforms non-normal data into a normal distribution. Named after statisticians George Box and David Cox who developed it in 1964, this transformation is particularly useful when your data violates the normality assumption required by many statistical methods.
 
 [source,math]
@@ -507,3 +615,84 @@ image:boxcox.png[]
 
 
 
+=== Counting
+
+==== Binarization (is it present or not)
+* Rule: replace every positive count with 1, keep 0 as is => clipping everything larger than 1 to 1
+.Example
+[source,python]
+----
+df['song_listened'] = (df['listen_count'] > 0).astype('uint8')
+----
+
+==== Binning (rough quantity, not precise number)
+.Idea: 
+* Map a wide numeric range to a small ordered set of buckets. 0-9 -> bin 1, 10-99 → bin 2, 100-999 → bin 3, …
+* Quantile (equal-frequency) bins with pd.qcut if you want balanced buckets.
+.Example
+
+[source,python]
+----
+import pandas as pd
+df = pd.read_json('yelp_academic_dataset_business.json', lines=True)
+print(df["review_count"].describe())
+----
+
+.Output:
+[source,python]
+----
+count    150346.000000
+mean         44.866561
+std         121.120136
+min           5.000000
+25%           8.000000
+50%          15.000000
+75%          37.000000
+max        7568.000000
+Name: review_count, dtype: float64
+----
+
+.Plot the original distribution
+[source,python]
+----
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10, 5))
+df['review_count'].hist(bins=50, edgecolor='black')
+plt.xlabel('Review Count')
+plt.ylabel('Frequency')
+plt.title('Distribution of Review Count')
+plt.grid(True)
+plt.savefig('./images/review_count_distribution.png')
+plt.show()
+----
+
+.Output:
+
+image:review_count_distribution.png[]
+
+
+
+.Apply binning
+[source,python]
+----
+df["review_decile"] = pd.qcut(
+   df["review_count"],
+   q=10,
+   labels=False      # 0 … 9, keeps ordinal information
+)
+print("\nvalue counts per decile")
+print(df["review_decile"].value_counts().sort_index())
+# Plot the binned distribution
+plt.figure(figsize=(10, 5))
+df['review_decile'].hist(bins=10, edgecolor='black')
+plt.xlabel('Review Count')
+plt.ylabel('Frequency')
+plt.title('Distribution of Review Count')
+plt.grid(True)
+plt.savefig('review_count_10_distribution.png', )
+plt.show()
+----
+
+.Output:
+
+image:review_count_10_distribution.png[]
