@@ -1111,7 +1111,8 @@ Tidy DataFrame (monthly revenue per store):
 
 
 ==== Summary
-Summary cheat-sheet
+.Summary cheat-sheet
+
 * Headers-as-data → melt() (longer).
 * Many variables in one column → pivot() / pivot_table() (wider).
 * Too-fine granularity / repeated rows → groupby(...).agg() to collapse.

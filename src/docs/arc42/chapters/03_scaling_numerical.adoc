@@ -415,9 +415,11 @@ While it has limitations (unbounded range, sensitivity to outliers), Z-score nor
 
 
 === Z-score normalization vs min-max scaling
+
 .Outliers still matter
 Unlike min-max scaling, z-score does not squash every point into a hard bound; values more than a few σ from the mean remain out there. If you explicitly set the axis limits wider or call hist(..., range=(-10,10)) you will see those tails.
 .Min-Max scaling – pick it when
+
 * You know the feature has a hard, meaningful bound (e.g. percentages 0–100, sensor range 0-1023).
 * The model downstream explicitly expects inputs inside a fixed interval – typical for ‑ neural networks with sigmoid / tanh activations,
 ** image pipelines that were trained on 0-1 pixels.
@@ -425,6 +427,7 @@ Unlike min-max scaling, z-score does not squash every point into a hard bound; v
 Min-Max puts every training sample between the chosen limits, so zeros stay zero and all features end on an identical scale.
 
 .Z-score (standard) scaling – pick it when
+
 * The feature is roughly bell-shaped or at least single-peaked, so mean ± σ describes it sensibly.
 * You want some robustness to rare extremes: they do not drag the whole bulk into 0-0.1 the way Min-Max would.
 * Algorithms use distance, dot products or gradient descent (k-NN, SVM, PCA, regressions, neural nets): centring at 0 and giving unit variance makes optimisation easier and the loss landscape better conditioned.
@@ -434,6 +437,7 @@ Min-Max puts every training sample between the chosen limits, so zeros stay zero
 
 
 === Winsorizing
+
 Winsorizing is a statistical technique used to handle outliers in datasets by replacing extreme values with less extreme values at specified percentiles. Named after biostatistician Charles P. Winsor, this method provides a robust alternative to **simply removing outliers**, preserving the sample size while reducing the impact of extreme observations.
 
 The process of limiting extreme values in statistical data by replacing outliers with values at specified percentiles. Unlike trimming, winsorizing preserves all data points by transforming rather than removing them.
@@ -441,6 +445,7 @@ The process of limiting extreme values in statistical data by replacing outliers
 
 .Percentiles
 Statistical measures that divide a dataset into 100 equal parts. For example:
+
 - **5th percentile**: The value below which 5% of the data falls
 - **95th percentile**: The value below which 95% of the data falls
 
@@ -448,6 +453,7 @@ image:winsorized.png[]
 
 .Outliers
 Data points that are significantly different from other observations in the dataset. These can be:
+
 - **Legitimate extreme values**: Valid but unusual measurements
 - **Measurement errors**: Incorrect data due to equipment malfunction or human error
 - **Data entry errors**: Mistakes made during data collection or input
@@ -613,6 +619,8 @@ image:boxcox.png[]
 4. **Handle Skewness**:
    The transformation reduces skewness, making the data more symmetric.
 
+.Rule of thumb
+Positive + skewed + variance grows with the mean + model wants normality ⇒ try Box-Cox; otherwise use a simpler transform.
 
 
 === Counting
