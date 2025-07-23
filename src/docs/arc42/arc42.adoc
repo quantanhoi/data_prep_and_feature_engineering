@@ -93,4 +93,4 @@ include::chapters/06_multimodal_input.adoc[]
 // include::chapters/12_glossary.adoc[]
 
 
-include::chapters/13_tensorflow_horse_truck.adoc[]
+//include::chapters/13_tensorflow_horse_truck.adoc[]

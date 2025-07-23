@@ -121,6 +121,71 @@ encoded = pd.get_dummies(data, columns=['city'])
 encoded = pd.get_dummies(data, columns=['city'], prefix='city')
 ----
 
+.Example with cupid parquet file
+[source,python]
+----
+import pandas as pd
+df = pd.read_parquet('okcupid_profiles.parquet', engine='fastparquet')
+print(df.head()['body_type'])
+"""
+0    a little extra
+1           average
+2              thin
+3              thin
+4          athletic
+Name: body_type, dtype: object
+"""
+
+from sklearn.preprocessing import OneHotEncoder
+# Create OneHotEncoder
+encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+# Fit and transform body_type column
+encoded_data = encoder.fit_transform(df[['body_type']])
+# Bonus 1: Get feature names
+feature_names = encoder.get_feature_names_out(['body_type'])
+print(f"Feature names: {feature_names}")
+"""
+Feature names: ['body_type_a little extra' 'body_type_athletic' 'body_type_average'
+ 'body_type_curvy' 'body_type_fit' 'body_type_full figured'
+ 'body_type_jacked' 'body_type_overweight' 'body_type_rather not say'
+ 'body_type_skinny' 'body_type_thin' 'body_type_used up' 'body_type_None']
+"""
+# Create DataFrame with encoded columns
+encoded_df = pd.DataFrame(encoded_data, columns=feature_names)
+print(encoded_df.head())
+----
+
+.Output:
+----
+body_type_a little extra  body_type_athletic  body_type_average  \
+0                       1.0                 0.0                0.0   
+1                       0.0                 0.0                1.0   
+2                       0.0                 0.0                0.0   
+3                       0.0                 0.0                0.0   
+4                       0.0                 1.0                0.0   
+
+   body_type_curvy  body_type_fit  body_type_full figured  body_type_jacked  \
+0              0.0            0.0                     0.0               0.0   
+1              0.0            0.0                     0.0               0.0   
+2              0.0            0.0                     0.0               0.0   
+3              0.0            0.0                     0.0               0.0   
+4              0.0            0.0                     0.0               0.0   
+
+   body_type_overweight  body_type_rather not say  body_type_skinny  \
+0                   0.0                       0.0               0.0   
+1                   0.0                       0.0               0.0   
+2                   0.0                       0.0               0.0   
+3                   0.0                       0.0               0.0   
+4                   0.0                       0.0               0.0   
+
+   body_type_thin  body_type_used up  body_type_None  
+0             0.0                0.0             0.0  
+1             0.0                0.0             0.0  
+2             1.0                0.0             0.0  
+3             1.0                0.0             0.0  
+4             0.0                0.0             0.0
+----
+
 
 .Advantages of One-Hot Encoding
 
@@ -213,6 +278,197 @@ df['education_level'] # 6 values: HS, Bachelor's, Master's, etc.
 4. **Continuous Variables** (use scaling/binning)
 5. **Memory Constraints** (sparse matrices become too large)
 
+=== Dummy Coding
+This is the same as one-hot encoding, but with one less column. Because that “extra” indicator column never adds information—it is a perfect linear copy of the others.
+Example with three categories
+body_type ∈ {average, athletic, thin}
+One-hot (drop_first=False) gives you three columns:
+[source,python]
+----
+          average   athletic   thin  
+row 1        1         0         0  
+row 2        0         1         0  
+row 3        0         0         1  
+----
+Dummy coding (drop_first=True) gives you two columns:
+[source,python]
+----
+          athletic   thin      ← K-1 columns
+row 1        0         0        ← both zero  ⇒ reference = “average”
+row 2        1         0
+row 3        0         1
+----
+
+* You have the same K possible patterns, one of them is now all-zeros vector
+* The Matrix is full rank, so coefficients estimation works
+* Each coefficient is the effect relative to the reference (“average”).
+
+.Example coding
+[source,python]
+----
+#Dummy Coding
+dummies = pd.get_dummies(df["body_type"], prefix="body", drop_first=True)
+# Concat to original DataFrame and drop original column
+df_dummy = pd.concat([df.drop(columns=["body_type"]), dummies], axis=1)
+
+print("Dummy coded DataFrame: ", dummies.head(), sep="\n")
+----
+
+.Output:
+[source, python]
+----
+Dummy coded DataFrame: 
+   body_athletic  body_average  body_curvy  body_fit  body_full figured  \
+0          False         False       False     False              False   
+1          False          True       False     False              False   
+2          False         False       False     False              False   
+3          False         False       False     False              False   
+4           True         False       False     False              False   
+
+   body_jacked  body_overweight  body_rather not say  body_skinny  body_thin  \
+0        False            False                False        False      False   
+1        False            False                False        False      False   
+2        False            False                False        False       True   
+3        False            False                False        False       True   
+4        False            False                False        False      False   
+
+   body_used up  
+0         False  
+1         False  
+2         False  
+3         False  
+4         False  
+----
+
+
+=== Effect Coding
+Effect coding starts from ordinary one-hot/dummy columns and then re-labels the reference group.
+.Dummy Coding
+
+* K-1 Columns
+* reference rows = all 0
+
+.Effect Coding
+
+* Same K-1 Columns
+* reference rows = all -1
+* every non-reference row keeps a single +1 and the rest 0
+[source,python]
+----
+#Effect Coding
+import pandas as pd
+
+def effect_code(series: pd.Series, prefix="x"):
+    """Return an effect–coded DataFrame (K-1 columns, 1/0/-1)."""
+    dummies = pd.get_dummies(series, prefix=prefix, drop_first=True)
+    # rows that were dropped_first() become the reference --> turn the 0s into -1
+    ref_mask = (~series.isna()) & (dummies.sum(axis=1) == 0)
+    dummies.loc[ref_mask, :] = -1
+    return dummies
+
+ec = effect_code(df["body_type"], prefix="body")
+df_ec = pd.concat([df.drop(columns="body_type"), ec], axis=1)
+print("Effect coded DataFrame: ", ec.head(), sep="\n")
+----
+
+.Output:
+[source,python]
+----
+#Effect Coding
+import pandas as pd
+
+def effect_code(series: pd.Series, prefix="x"):
+    """Return an effect–coded DataFrame (K-1 columns, 1/0/-1)."""
+    dummies = pd.get_dummies(series, prefix=prefix, drop_first=True)
+    # rows that were dropped_first() become the reference --> turn the 0s into -1
+    ref_mask = (~series.isna()) & (dummies.sum(axis=1) == 0)
+    dummies.loc[ref_mask, :] = -1
+    return dummies
+
+ec = effect_code(df["body_type"], prefix="body")
+df_ec = pd.concat([df.drop(columns="body_type"), ec], axis=1)
+print("Effect coded DataFrame: ", ec.head(), sep="\n")
+----
+
+=== Frequency Cut-Off
+Take a high-cardinality (many different values) categorical column, pick a threshold (absolute count or relative share).
+.Take an example
+
+* body_type column has 300 unique values
+* the most common 50 types take up 90% of the data
+* we can replace the remaining 250 types with a single "other" category
+* This is where we can use frequency cut-off
+* min_count = 200 means that if the frequency of a category is below 200, it will be replaced with "other"
+
+.Example with function
+[source,python]
+----
+# Effect Coding
+def frequency_cutoff(series: pd.Series, min_count: int = 100) -> pd.Series:
+    """Replace infrequent levels by 'other'."""
+    vc = series.value_counts()
+    return series.where(series.map(vc) >= min_count, other="other")
+
+df["body_type_cut"] = frequency_cutoff(df["body_type"], min_count=200)
+dummies = pd.get_dummies(df["body_type_cut"], prefix="body")
+
+print(dummies.head(2))
+----
+.Output:
+[source,python]
+----
+body_a little extra  body_athletic  body_average  body_curvy  body_fit  \
+0                 True          False         False       False     False   
+1                False          False          True       False     False   
+
+   body_full figured  body_jacked  body_other  body_overweight  body_skinny  \
+0              False        False       False            False        False   
+1              False        False       False            False        False   
+
+   body_thin  body_used up  
+0      False         False  
+1      False         False
+----
+
+.Example with sklearn
+[source,python]
+----
+from sklearn.preprocessing import OneHotEncoder
+
+ohe = OneHotEncoder(
+        handle_unknown="infrequent_if_exist",
+        min_frequency=200,   # absolute cut-off
+        drop="first"         # optional: keeps dummy coding
+)
+X_encoded = ohe.fit_transform(df[["body_type"]])
+print("Encoded DataFrame with OHE: ", pd.DataFrame(X_encoded.toarray(), columns=ohe.get_feature_names_out()).head(), sep="\n")
+----
+
+.When NOT to use it
+If the tail categories really are business-critical (e.g. fraud labels, rare diseases), you must keep them or model them differently.
+
+.Output:
+[source,python]
+----
+Encoded DataFrame with OHE: 
+   body_type_athletic  body_type_average  body_type_curvy  body_type_fit  \
+0                 0.0                0.0              0.0            0.0   
+1                 0.0                1.0              0.0            0.0   
+
+   body_type_full figured  body_type_jacked  body_type_overweight  \
+0                     0.0               0.0                   0.0   
+1                     0.0               0.0                   0.0   
+
+   body_type_skinny  body_type_thin  body_type_used up  body_type_None  \
+0               0.0             0.0                0.0             0.0   
+1               0.0             0.0                0.0             0.0   
+
+   body_type_infrequent_sklearn  
+0                           0.0  
+1                           0.0
+----
+
+
 
 === Feature Hashing
 
@@ -227,10 +483,10 @@ Feature hashing maps each category (or token) to one of a fixed number of column
 3. If multiple categories hash to the same bucket (collision), their values are combined (typically summed).
 4. The resulting feature vector has a fixed length, regardless of the number of unique categories.
 
+.Example
 [source,python]
 ----
 from sklearn.feature_extraction import FeatureHasher
-
 # Example: Hashing city names into 4 buckets
 data = [{'city': 'New York'}, {'city': 'London'}, {'city': 'Paris'}, {'city': 'New York'}]
 hasher = FeatureHasher(n_features=4, input_type='dict')
@@ -238,10 +494,77 @@ hashed_features = hasher.transform(data)
 print(hashed_features.toarray())
 ----
 
+.Another Example with Cupid location
+[source,python]
+----
+import pandas as pd
+from sklearn.feature_extraction import FeatureHasher
+df = pd.read_parquet('okcupid_profiles.parquet', engine='fastparquet')
+print(df['location'].head())
+
+
+# 2. Coerce location to str, fill missing with a sentinel
+location_str = df["location"].fillna("missing").astype(str)
+
+# 3. Build list-of-strings format  (simplest)
+samples = location_str.to_list()          # length = n_rows
+samples = [[s] for s in samples]      # each sample must be an *iterable* of str
+
+# 4. Feature hashing: 2⁸ = 256 buckets with signed hash
+hasher = FeatureHasher(
+    n_features=256,          # power of two makes modulo cheap; tune as needed
+    input_type="string",
+    alternate_sign=True      # +1 / –1 collisions cancel instead of always adding
+)
+
+hashed = hasher.transform(samples)     # sparse CSR matrix  (n_rows × 256)
+
+# 5. Wrap in a DataFrame (dense just for the demo print-out)
+hashed_df = pd.DataFrame(
+    hashed.toarray(),                  # keep sparse in real pipelines!
+    columns=[f"hash_{i}" for i in range(hashed.shape[1])],
+    index=df.index
+)
+print("first 3 hashed rows:")
+print(hashed_df.head(3))
+
+# 6. Stick back onto the original frame (drop location if you’re done)
+df_hashed = pd.concat([df.drop(columns="location"), hashed_df], axis=1)
+print("final shape with hashed columns ->", df_hashed.shape)
+----
+
+.Output:
+[source,python]
+----
+first 3 hashed rows:
+   hash_0  hash_1  hash_2  hash_3  hash_4  hash_5  hash_6  hash_7  hash_8  \
+0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0   
+1     0.0     1.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0   
+2     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0     0.0   
+
+   hash_9  ...  hash_246  hash_247  hash_248  hash_249  hash_250  hash_251  \
+0     0.0  ...       0.0       0.0       0.0       0.0       0.0       0.0   
+1     0.0  ...       0.0       0.0       0.0       0.0       0.0       0.0   
+2     0.0  ...       0.0       0.0       0.0       0.0       0.0       0.0   
+
+   hash_252  hash_253  hash_254  hash_255  
+0       0.0       0.0       0.0       0.0  
+1       0.0       0.0       0.0       0.0  
+2       0.0       0.0       0.0       0.0  
+
+[3 rows x 256 columns]
+final shape with hashed columns -> (59946, 276)
+----
+
+.Explain:
+
+* Instead of 100000 like one-hot encoding, where the first category is true and the rest are false, with feature hashing, this can be 100101.
+* In the above example, the location column was hashed into 256 buckets. which is defined by the `n_features` parameter.
+
 .Advantages of Feature Hashing
 
-1. **Scalability:** Handles very high-cardinality features efficiently.
-2. **Fixed Output Size:** Output vector size is independent of the number of unique categories.
+1. **Scalability:** Handles very high-cardinality features efficiently (for example 16000 different categories).
+2. **Fixed Output Size:** Output vector size is independent of the number of unique categories (defined by `n_features`).
 3. **Memory Efficiency:** Reduces memory usage compared to one-hot encoding.
 4. **Speed:** Fast to compute, suitable for online learning and streaming data.
 

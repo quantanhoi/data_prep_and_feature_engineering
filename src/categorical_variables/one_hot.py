@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 df = pd.read_parquet('okcupid_profiles.parquet')
 
+print(df.head())
 # Create OneHotEncoder
 encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
 
