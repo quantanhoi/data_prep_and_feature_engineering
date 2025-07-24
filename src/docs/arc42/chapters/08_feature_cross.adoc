@@ -1,0 +1,15 @@
+:jbake-title: Feature Cross
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 8
+:filename: /chapters/08_feature_cross.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-design-decisions]]
+== Feature Cross
+

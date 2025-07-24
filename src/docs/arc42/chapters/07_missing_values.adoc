@@ -1,0 +1,176 @@
+:jbake-title: Missing Values Handling
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 7
+:filename: /chapters/07_missing_values.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-concepts]]
+== Missing Values Handling
+
+=== MCAR (Missing Completely At Random)
+
+* Whether the cell is blank is independent of every variable in the dataset, observed or unobserved.
+* Consequence: removing those rows or columns does not introduce bias, you merely lose power
+
+=== MAR (Missing At Random)
+
+* Blankness depends on variables you have already observed but not on the unseen value itself (income missing more often for older people, but not for high earners per se).
+* Consequence: most standard imputer (mean, K-NN, regression, iterative) give unbiased estimates if fitted correctly
+
+=== MNAR (Missing Not At Random)
+
+* The probability of being missing depends on the missing value itself (e.g. the higher salary, the less likely it is being reported).
+* Consequence: any naive deletion or imputattion can distort the signalm you need to model the missing ness mechanism or gather more data to avoid bias
+
+=== Summary
+
+* MCAR = roll the dice
+* MAR = Depends on what we can see
+* MNAR = Depends on what we cannot see
+
+=== Visualizing Missingness
+[source,python]
+----
+scat = pd.read_csv(
+    './Data/scat.csv'
+)
+scat.drop(columns='Unnamed: 0', inplace=True)
+missing_values = scat.isnull()
+missing_values
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+cmap = ListedColormap(['darkgrey', 'black'])
+sns.heatmap(
+    missing_values,
+    cbar=False,
+    cmap=cmap,
+    linewidths=0.5
+)
+plt.yticks([])
+----
+
+
+=== Handling Missing Values
+
+==== Do nothing (baseline)
+
+*  Possible only with algorithms that natively branch on NaN (LightGBM, CatBoost)
+
+==== Deletion
+
+* Drop rows or columns - safe only under MCAR; otherwise biases the model
+* Thumb rule: rows are usually more precious than columns
+
+.Example 
+[source,python]
+----
+chicago_raw = pd.read_parquet('./Data/chicago_train_data.parquet')
+# This one show heatmap of missing values
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+cmap = ListedColormap(['darkgrey', 'black'])
+sns.heatmap(
+    chicago_raw.isna().T,
+    cbar=False,
+    cmap=cmap,
+    #linewidths=0.5
+)
+
+# Analyze the number of missing values per station
+chicago_raw.isna().astype(int).sum(axis='rows').sort_values(ascending=False).head(10)
+# This one shows heatmap after dropping columns
+cmap = ListedColormap(['darkgrey', 'black'])
+sns.heatmap(
+    chicago_raw.dropna(
+        axis='columns',
+        thresh=chicago_raw.shape[0]-30).isna().T,
+    cbar=False,
+    cmap=cmap,
+    #linewidths=0.5
+)
+----
+
+==== Keep a missing-indicator + sensible fill value
+
+* Best for structural absence
+[source,python]
+----
+df["Alley_missing"] = df["Alley"].isna().astype(int)
+df["Alley"] = df["Alley"].fillna("None")
+----
+
+==== Simple Value Imputations (fast baseline)
+
+* Better for MAR because they use other columns to predict the blank one
+
+.Iterative/EM-style imputer (sklearn's IterativeImputer, MICE)
+* Loops across columns until convergence, handles mixed dtypes, heavier compute
+* Still assumes MAR, under NMAR you must model the mechanism or collect more info
+
+
+.Example Impute with global mean
+[source,python]
+----
+# Get the indices of the rows where '87th (Red Line)' station has missing values
+indices_of_missing = chicago_raw[chicago_raw['87th (Red Line)'].isna()].index.tolist()
+print(indices_of_missing)
+""""
+['2013-09-01', '2013-09-02', '2013-09-03', '2013-09-04', '2013-09-05', '2013-09-06', '2013-09-07', '2013-09-08', '2013-09-09', '2013-09-10', '2013-09-11', '2013-09-12', '2013-09-13', '2013-09-14', '2013-09-15', '2013-09-16', '2013-09-17', '2013-09-18', '2013-09-19', '2013-09-20', '2013-09-21', '2013-09-22', '2013-09-23', '2013-09-24', '2013-09-25', '2013-09-26', '2013-09-27', '2013-09-28', '2013-09-29', '2013-09-30']"""
+
+# Preparing for global mean imputation by calculating the mean of the non-missing values
+chicago_raw_nona = chicago_raw.dropna(
+    axis='columns',
+    thresh=5733-30
+)
+chicago_raw_nona.mean().mean()
+"""
+np.float64(3.301028425856202)
+"""
+
+from sklearn.impute import SimpleImputer
+from matplotlib.colors import ListedColormap
+cmap = ListedColormap(['darkgrey', 'black'])
+
+imp_constant = SimpleImputer(
+    missing_values=pd.NA,
+    strategy='constant',
+    fill_value=chicago_raw_nona.mean().mean()
+)
+chicago_raw_nona = pd.DataFrame(
+    imp_constant.fit_transform(chicago_raw_nona),
+    columns = chicago_raw_nona.columns,
+    index=chicago_raw_nona.index
+)
+sns.heatmap(
+    chicago_raw_nona.isna().T,
+    cbar=False,
+    cmap=cmap,
+    #linewidths=0.5
+)
+----
+
+.Explanation
+In statistic and ML, to impute a variable means to replace the missing cells with values that are estimated from the observed part of data so that the data matrix becomes complete and can be passed to algorithms that do not accept NaNs.
+
+**Why a single mean value is the most common first choice?**
+
+* Simple, deterministic baseline
+** one line of code (SimpleImputer(strategy="mean")) and you’re done.
+** requuires no extra models, hyper-parameters, or tuning
+
+* preserves the sample mean of the variable: Replaceing each NaN by the arithmetic mean keeps the columns's overall mean unchanged, so the point estimates that depends only on the marginal mean remain unbiased if the data is MCAR.
+
+* Keeps every row in play: Deletion would throw away entire samples, mean imputation keeps the training set size maximal, which is often better for model variance
+
+* Numerically convenient: Produces a constant numeric place holder that every downstream algorithm understands, avoids branch-on-NaN logic
+
+==== Multiple imputation (Rubin)
+
+* Needed only for statistical inference where correct standard errors matter; rarely used just for prediction
+

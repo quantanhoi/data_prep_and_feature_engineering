@@ -70,11 +70,12 @@ include::chapters/06_multimodal_input.adoc[]
 
 <<<<
 // 7. Deployment View
+include::chapters/07_missing_values.adoc[]
 
 
 // <<<<
 // // 8. Concepts
-// include::chapters/08_concepts.adoc[]
+include::chapters/08_feature_cross.adoc[]
 
 // <<<<
 // // 9. Architecture Decisions

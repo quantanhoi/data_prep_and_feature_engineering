@@ -13,8 +13,7 @@ ifndef::imagesdir[:imagesdir: ../../images]
 
 === What is Embedding?
 
-Embedding is a technique that maps discrete categorical data (like words, categories, or IDs) into dense, continuous vector representations. Instead of using sparse one-hot encoding, embeddings represent each category as a learnable dense vector of real numbers.
-
+Embedding is simply a learned look-up table that turns a discrete item (word, user-id, product-code, birthday, plurarity) into a short, dense, continuous vector. The table is stored as a weight matrix W with one row per category and a handful of columns (embedding dimensions). During training, when the model encounters the integer ID i, it just grabs W[i] and treats that small vector as the feature for that item. Because W is updated by back-propagation, rows that help the model make similar predictions drift towards similar coordinates, while dissimilar rows drift apart. This allows the model to learn semantic relationships between items.
 ==== Key Concepts
 
 * **Dense Representation**: Each category becomes a vector of floating-point numbers
@@ -23,6 +22,19 @@ Embedding is a technique that maps discrete categorical data (like words, catego
 * **Semantic Relationships**: Similar items can have similar embedding vectors
 
 === Why Use Embeddings?
+
+* Space and speed: 
+** One-hot for 100,000 words is a 100,000 long sparse vector
+** A 100,000 x 128 embedding matrix is 12,8M float - orders of magnitude smaller and much faster to multiply with a network layer
+
+* Capturing similarities:
+** one-hot vectors are orthogonal, "cat" and "dog" are as similar as "cat" and "car"
+** A learned embedding can place “cat” near “dog”, far from “carburetor”, enabling the model to generalise from seen to unseen combinations.
+
+* Cold start/ extensibility
+** pre-trained embedding can be dropped into a downstream task that has very little labelled data, giving the model a head start
+
+* Works for any high-cardinality categorical data: users, items, words, postcode, hour-of-day x day-of-week, etc.
 
 ==== Problems with One-Hot Encoding
 
@@ -65,6 +77,32 @@ embedding_layer = layers.Embedding(
     input_dim=N_CLASSES,    # 6 categories (0-5)
     output_dim=EMBED_DIM    # 2-dimensional output vectors
 )
+embeds = embedding_layer(tf.constant(plurality_class)) # Applying the Embedding
+embeds.shape
+# TensorShape([999, 3])
+embeds[:5]
+# Output the first 5 embeddings
+"""
+<tf.Tensor: shape=(5, 2), dtype=float32, numpy=
+array([[-0.0438777 ,  0.01652415],
+       [-0.0438777 ,  0.01652415],
+       [-0.0438777 ,  0.01652415],
+       [ 0.00865108,  0.04175825],
+       [-0.0438777 ,  0.01652415]], dtype=float32)>
+
+In This example, the value for each row with same category is the same, because the model's only input is the plurality column
+"""
+
+print(embedding_layer.weights)
+"""
+[<Variable path=embedding_3/embeddings, shape=(6, 2), dtype=float32, value=[
+ [-0.0438777   0.01652415]
+ [ 0.01769542 -0.02666142]
+ [ 0.00865108  0.04175825]
+ [ 0.01519707 -0.04325528]
+ [ 0.00694519 -0.02580853]
+ [-0.03906142  0.03376276]]>]
+ """
 ----
 
 ==== Lookup Table Concept
@@ -86,109 +124,205 @@ Index 5 (Quintuplets) → [0.0, -0.4]
 * **Output**: `(batch_size, embed_dim)` → `(5, 2)` tensor
 * **Values**: Dense floating-point vectors
 
-=== Text Embedding Example
 
-==== Task: Website Classification
 
-Predict which website (GitHub, NY Times, TechCrunch) an article comes from based on its title.
 
-==== Text Preprocessing Pipeline
+
+=== Website-Source Classifier – Text Embedding Example
+
+We build a neural network that reads an article **title** and predicts the **website**
+(GitHub / NY Times / TechCrunch) it came from.  
+Every line of the accompanying `text_embedding.py` is explained below.
+
+==== 1 Reading the raw CSV
 
 [source,python]
 ----
-# 1. Build vocabulary from all titles
-tokenizer = Tokenizer()
-tokenizer.fit_on_texts(titles_df.title)
+DATA_DIR = "./Data"
+DATASET_NAME = "titles_full.csv"
+COLUMNS = ['title', 'source']
 
-# 2. Convert text to integer sequences
+titles_df = (
+    pd.read_csv(os.path.join(DATA_DIR, DATASET_NAME),
+                header=None,          # file has no header row
+                names=COLUMNS)        # give the two columns nice names
+)
+----
+
+*Result* → `titles_df` has two string columns:
+
+ title | source  
+-------|--------
+`"Why I love Python generators"` | `github`  
+`"Stocks fall on Fed worries"`   | `nytimes`  
+`"New funding for XYZ start-up"` | `techcrunch`  
+
+==== 2 Tokenisation – words → integers
+
+[source,python]
+----
+tokenizer = Tokenizer()                   # ➊ create empty vocabulary
+tokenizer.fit_on_texts(titles_df.title)   # ➋ scan ALL titles, assign ids
 integerized_titles = tokenizer.texts_to_sequences(titles_df.title)
-
-# 3. Pad sequences to fixed length
-padded_sequences = pad_sequences(sequences, MAX_LEN, padding='post')
 ----
 
-==== Vocabulary Statistics
+• ➊ `Tokenizer` is a small helper that will map **each unique word → an id**  
+• ➋ after `fit_on_texts`, the mapping is frozen – most-frequent word gets id 1, …  
+`texts_to_sequences` then turns every title into a list of those ids.
 
-* **VOCAB_SIZE**: Total number of unique words
-* **DATASET_SIZE**: Number of titles in dataset
-* **MAX_LEN**: Length of longest title (for padding)
+.Example decode
+[source,python]
+----
+token_id = integerized_titles[0][0]
+print(f"{token_id} -> {tokenizer.index_word[token_id]}")
+# 13 -> 'why'
+----
 
-==== Word-to-Integer Mapping
+==== 3 Dataset statistics
 
 [source,python]
 ----
-# Decode integer back to word
-token_id = integerized_titles[0][0]
-word = tokenizer.index_word[token_id]
-print(f"{token_id} → {word}")
-
-# Decode entire sequence
-decoded = [tokenizer.index_word[id] for id in integerized_titles[0]]
+VOCAB_SIZE   = len(tokenizer.index_word)        # unique words
+DATASET_SIZE = tokenizer.document_count         # #titles
+MAX_LEN      = max(len(s) for s in integerized_titles)   # longest title
 ----
 
-==== Neural Network Architecture
+These numbers feed straight into the model:
+
+* `VOCAB_SIZE` → rows of the embedding table  
+* `MAX_LEN`    → input length expected by the network  
+
+==== 4 Fixed-length sequences
+
+Neural nets need all samples to be the same length.
+
+[source,python]
+----
+def create_sequences(texts, max_len=MAX_LEN):
+    seqs  = tokenizer.texts_to_sequences(texts)
+    # pad with zeros **at the end** until every row is MAX_LEN long
+    return pad_sequences(seqs, max_len, padding='post')
+----
+
+A quick sanity check:
+
+[source,python]
+----
+create_sequences(["Holy cash cow Batman",
+                  "Close look at a flu outbreak"])
+# → array([[ 12,  98, 333,  7,  0, 0, ...],
+#          [ 35, 119, 18,  1,  9, ...]])
+----
+
+==== 5 Label encoding – sources → one-hot
+
+[source,python]
+----
+CLASSES  = {'github': 0, 'nytimes': 1, 'techcrunch': 2}
+N_CLASSES = len(CLASSES)
+
+def encode_labels(src_series):
+    idx  = [CLASSES[s] for s in src_series]
+    return utils.to_categorical(idx)      # id → one-hot row
+----
+`'github'` becomes `[1,0,0]` etc.  Keras will use categorical-cross-entropy.
+
+==== 6 Train / validation split
+
+[source,python]
+----
+N_TRAIN = int(DATASET_SIZE * 0.8)
+
+titles_train, sources_train = titles_df.title[:N_TRAIN], titles_df.source[:N_TRAIN]
+titles_valid, sources_valid = titles_df.title[N_TRAIN:], titles_df.source[N_TRAIN:]
+
+X_train, Y_train = create_sequences(titles_train), encode_labels(sources_train)
+X_valid, Y_valid = create_sequences(titles_valid), encode_labels(sources_valid)
+----
+
+80 % of the rows train the model, 20 % monitor generalisation.
+
+==== 7 Model definition
 
 [source,python]
 ----
 def build_dnn_model(embed_dim):
-    model = models.Sequential([
-        # Embedding Layer: word_id → dense_vector
-        layers.Embedding(VOCAB_SIZE + 1, embed_dim, input_shape=[MAX_LEN]),
-        
-        # Average Pooling: sequence → single vector
+    return models.Sequential([
+        # (batch, MAX_LEN) → (batch, MAX_LEN, embed_dim)
+        layers.Embedding(input_dim=VOCAB_SIZE + 1,
+                         output_dim=embed_dim,
+                         input_shape=[MAX_LEN]),
+
+        # Mean-pool the time axis: (batch, MAX_LEN, embed_dim) → (batch, embed_dim)
         layers.Lambda(lambda x: tf.reduce_mean(x, axis=1)),
-        
-        # Classification: vector → probabilities
+
+        # Final classifier: (batch, embed_dim) → (batch, 3)
         layers.Dense(N_CLASSES, activation='softmax')
     ])
-    return model
 ----
+Why an `Embedding` layer?  
+A one-hot for a 10 000-word vocabulary is a 10 000-long sparse vector.
+An embedding shrinks that to e.g. 10 floats, learned during training.
 
-==== Layer-by-Layer Transformation
+The tiny `Lambda` layer replaces an RNN/CNN with a simple “average all word
+vectors”.  Adequate for short titles, lightning-fast to train.
 
-1. **Embedding Layer**
-   * Input: `(batch_size, MAX_LEN)` - sequences of word indices
-   * Output: `(batch_size, MAX_LEN, embed_dim)` - sequences of dense vectors
-
-2. **Lambda Layer (Average Pooling)**
-   * Input: `(batch_size, MAX_LEN, embed_dim)`
-   * Output: `(batch_size, embed_dim)` - single vector per sample
-   * Function: Averages all word embeddings in the sequence
-
-3. **Dense Layer**
-   * Input: `(batch_size, embed_dim)`
-   * Output: `(batch_size, N_CLASSES)` - probability distribution
-   * Activation: Softmax for multi-class classification
-
-=== Training Process
-
-==== Data Preparation
+Model compile:
 
 [source,python]
 ----
-# Split data (80% train, 20% validation)
-N_TRAIN = int(DATASET_SIZE * 0.8)
-titles_train, sources_train = titles_df.title[:N_TRAIN], titles_df.source[:N_TRAIN]
-titles_valid, sources_valid = titles_df.title[N_TRAIN:], titles_df.source[N_TRAIN:]
-
-# Convert to model inputs
-X_train = create_sequences(titles_train)  # Padded integer sequences
-Y_train = encode_labels(sources_train)    # One-hot encoded labels
+model.compile(optimizer='adam',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
 ----
 
-==== Model Training
+==== 8 Training loop
 
 [source,python]
 ----
-dnn_model = build_dnn_model(embed_dim=10)
-dnn_history = dnn_model.fit(
+EMBED_DIM = 10
+BATCH_SIZE = 300
+EPOCHS = 100
+PATIENCE = 0         # early stop as soon as val_loss rises
+
+model = build_dnn_model(embed_dim=EMBED_DIM)
+
+history = model.fit(
     X_train, Y_train,
-    epochs=100,
-    batch_size=300,
+    epochs=EPOCHS,
+    batch_size=BATCH_SIZE,
     validation_data=(X_valid, Y_valid),
-    callbacks=[callbacks.EarlyStopping(patience=0)]
+    callbacks=[callbacks.EarlyStopping(patience=PATIENCE),
+               callbacks.TensorBoard("./text_models/dnn")]
 )
 ----
+
+Early stopping avoids over-fit; TensorBoard lets you inspect loss curves.
+
+==== 9 Results & inspection
+
+[source,python]
+----
+pd.DataFrame(history.history)[['loss','val_loss']].plot()
+pd.DataFrame(history.history)[['accuracy','val_accuracy']].plot()
+model.summary()
+----
+
+* Loss / accuracy graphs show learning progress and potential over-fit.  
+* `model.summary()` lists layer shapes, parameter counts (mostly the
+  `(VOCAB_SIZE+1) × EMBED_DIM` lookup table).
+
+==== 10 Key take-aways
+
+* **Tokeniser** turns free text → integer ids once; the mapping is reused everywhere.  
+* **Embedding** turns sparse ids → dense vectors that are *trainable* and
+  capture word similarity relevant to the classification task.  
+* Averaging is the crudest pooling—good enough for five-word titles.  
+* Only the **title** is an input feature; **source** is the supervised label.  
+
+You now have a minimal, fully-explained pipeline that converts raw CSV text
+into a working multi-class classifier—and a template you can adapt for any
+small NLP problem.
 
 ==== Training Output
 
@@ -226,57 +360,3 @@ dnn_history = dnn_model.fit(
 * **Computer Vision**: Feature embeddings for image classification
 * **Categorical Features**: Product categories, user demographics, geographic regions
 * **Time Series**: Temporal embeddings for sequential data
-
-=== Advanced Techniques
-
-==== Pre-trained Embeddings
-
-[source,python]
-----
-# Using pre-trained word vectors (Word2Vec, GloVe)
-embedding_layer = layers.Embedding(
-    vocab_size, 
-    embed_dim,
-    weights=[pretrained_weights],
-    trainable=False  # Freeze pre-trained weights
-)
-----
-
-==== Embedding Regularization
-
-* **Dropout**: Apply dropout to embeddings to prevent overfitting
-* **Weight Decay**: L2 regularization on embedding parameters
-* **Embedding Size**: Start small (50-100 dims) and increase if needed
-
-=== Troubleshooting
-
-==== Common Issues
-
-* **Cold Start**: New categories not seen during training
-* **Dimensionality**: Too high → overfitting, too low → underfitting
-* **Vocabulary Size**: Out-of-vocabulary words need special handling
-* **Initialization**: Random vs. pre-trained initialization trade-offs
-
-==== Best Practices
-
-* Use `mask_zero=True` for variable-length sequences
-* Reserve index 0 for padding tokens
-* Monitor embedding norms during training
-* Visualize embeddings using t-SNE or PCA for debugging
-
-=== Multimodal Extensions
-
-Embeddings can be combined with other data types:
-
-[source,python]
-----
-# Text + Categorical + Numerical features
-text_branch = Embedding(vocab_size, 64)(text_input)
-categorical_branch = Embedding(n_categories, 32)(categorical_input)
-numerical_branch = Dense(16)(numerical_input)
-
-# Concatenate all features
-combined = concatenate([text_branch, categorical_branch, numerical_branch])
-----
-
-
