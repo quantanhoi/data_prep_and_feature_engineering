@@ -1,0 +1,116 @@
+:jbake-title: Feature Selection
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 10
+:filename: /chapters/10_feature_selection.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-feature-selection]]
+== Feature Selection
+
+
+=== What is feature selection?                     
+Feature selection reduces the **set of input columns** to a smaller, more
+relevant subset while keeping every feature in its original form
+(no projections, hence different from PCA).  
+
+
+=== Why bother selecting features?               
+* Combat the curse of dimensionality – too many columns + few rows ⇒
+  over-fitting, unstable distances, long training time.  
+* Lower operational cost – fewer signals to collect and store.  
+* Improve interpretability – simpler models are easier to explain and debug.  
+* Avoid harmful interactions – e.g. multicollinearity breaks ordinary least
+  squares, irrelevant noise degrades SVM/NN performance.
+
+=== When is the pattern applicable?
+You have ≥ 100s of candidate predictors or columns with strong correlation /
+lots of missingness and you train a supervised model that penalises extra
+features (time-series and text pipelines often skip this step).
+
+=== Three families of methods
+1. Filter  – score each column (or column pair) **before** the model.  
+   Examples: VarianceThreshold, chi², ANOVA F-test, mutual information.  
+2. Wrapper – iteratively train a model on many subsets and pick the best
+   according to CV score.  Examples: Sequential Forward/Backward Selection,
+   Recursive Feature Elimination (RFE / RFECV).  
+3. Embedded – feature importance is learned **inside** the estimator.
+   Examples: L1-regularised linear models (Lasso / LogisticRegression),
+   tree-based `feature_importances_`, SelectFromModel.
+
+
+=== Cheat-sheet of main algorithms
+[cols="1,2,2,1"]
+|===
+|Technique |Idea in one sentence |Good for |Scikit-learn object
+
+|VarianceThreshold |Drop columns whose variance ≤ θ             |Sparse Boolean / one-hot mats |`VarianceThreshold`
+|SelectKBest / Percentile |Keep top-k columns by uni-variate score |Quick baseline, text bags     |`SelectKBest`, `SelectPercentile`
+|Recursive Feature Elimination (RFE) |Train → rank weights → prune → repeat |Small tabular sets, any estimator with coef_/FI |`RFE`, `RFECV`
+|SelectFromModel + L1 |Shrink irrelevant weights to 0 while fitting |High-dim linear models        |`SelectFromModel(LogisticRegression(penalty='l1'))`
+|SelectFromModel + Trees |Use impurity-based feature_importances_   |Mixed dtypes, non-linear rel. |`SelectFromModel(RandomForestClassifier())`
+|SequentialFeatureSelector |Greedy forward/backward subset search    |When k ≪ p and CV is cheap    |`SequentialFeatureSelector`
+|===
+
+
+=== Minimal, leakage-safe pipeline
+[source,python]
+----
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import SelectKBest, mutual_info_classif
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y)
+
+pipe = Pipeline([
+    ("scale", StandardScaler()),
+    ("fs",    SelectKBest(mutual_info_classif, k=50)),  # <-- filter
+    ("clf",   LogisticRegression(max_iter=1000, penalty="l2"))
+])
+pipe.fit(X_train, y_train)
+print("test-ACC:", pipe.score(X_test, y_test))
+----
+
+Note: FS is fitted **inside** the pipeline → no train/test leakage.
+
+
+=== Benefits & trade-offs
++ Cuts RAM / CPU load; speeds up grid-search.  
++ Reduces noise → better generalisation.  
++ Some selectors (L1, tree FI) work out-of-the-box on mixed dtypes.  
+– Filters ignore interactions; wrappers are slow; embedded methods
+  are model-specific.  
+– Risk of over-fitting FS hyper-params; always nest inside CV.
+
+
+=== Common mistakes
+* Selecting on the full dataset **before** the split → information leak.  
+* Relying solely on p-values → many false positives in high-dim regimes.  
+* Assuming zero coefficients in Lasso always mean “irrelevant” – with highly
+  correlated features the model just keeps one proxy.  
+* Forgetting to keep the dropping mask for production – model and
+  preprocessing must travel together.
+
+
+=== Recommended workflow
+ 1. Start with a cheap filter (VarianceThreshold or SelectPercentile).  
+ 2. If p ≫ n, add an embedded selector (L1 or tree FI).  
+ 3. Validate via nested CV; track the number of retained columns.  
+ 4. Persist the fitted selector (`joblib.dump(pipe)`) to guarantee
+    train-serve parity.
+
+=== Key take-aways
+1. Feature selection ≠ dimensionality reduction: you keep raw columns.  
+2. Choose the family based on data size vs. compute budget:
+   filters < embedded < wrappers (speed).  
+3. Always fit selectors inside the training fold to avoid leakage.  
+4. Evaluate that the reduced set truly improves CV metrics before locking it
+   into production.

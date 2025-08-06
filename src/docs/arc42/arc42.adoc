@@ -19,13 +19,14 @@ include::chapters/config.adoc[]
 ifdef::backend-html5[]
 ++++
 <style>
-.arc42help {font-size:small; width: 14px; height: 16px; overflow: hidden; position: absolute; right: 0; padding: 2px 0 3px 2px;}
+.arc42help {font-size:smaller; width: 14px; height: 16px; overflow: hidden; position: absolute; right: 0; padding: 2px 0 3px 2px;}
 .arc42help::before {content: "?";}
 .arc42help:hover {width:auto; height: auto; z-index: 100; padding: 10px;}
 .arc42help:hover::before {content: "";}
 @media print {
 	.arc42help {display:none;}
 }
+.body{font-size: 0.9em;}
 </style>
 ++++
 endif::backend-html5[]
@@ -77,17 +78,18 @@ include::chapters/07_missing_values.adoc[]
 // // 8. Concepts
 include::chapters/08_feature_cross.adoc[]
 
+
 // <<<<
 // // 9. Architecture Decisions
-// include::chapters/09_architecture_decisions.adoc[]
+include::chapters/09_dimension_reduction.adoc[]
 
 // <<<<
 // // 10. Quality Requirements
-// include::chapters/10_quality_requirements.adoc[]
+include::chapters/10_feature_selection.adoc[]
 
 // <<<<
 // // 11. Technical Risks
-// include::chapters/11_technical_risks.adoc[]
+include::chapters/11_train_split.adoc[]
 
 // <<<<
 // // 12. Glossary

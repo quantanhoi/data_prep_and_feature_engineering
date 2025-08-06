@@ -14,6 +14,21 @@ ifndef::imagesdir[:imagesdir: ../../images]
 == Categorical Variable
 Categorical variables describe qualitative phenomena - they represent characteristics, qualities, or group memberships rather than measurable quantities. This is the fundamental distinction from quantitative variables.
 
+.Code to check unique values in a categorical column
+[source,python]
+----
+print("Unique body types (using .unique()):")
+print(df['body_type'].unique())
+
+print("\nBody type counts (using .value_counts()):")
+print(df['body_type'].value_counts())
+
+print(f"\nTotal number of unique body types: {df['body_type'].nunique()}")
+
+print("\nUnique body types (using set()):")
+print(set(df['body_type'].dropna()))  # dropna() removes NaN values
+----
+
 Quantitative Variables::
 Quantitative Variables measure amounts
 - Stock price: $145.32
@@ -554,6 +569,31 @@ first 3 hashed rows:
 
 [3 rows x 256 columns]
 final shape with hashed columns -> (59946, 276)
+----
+
+
+.Extra
+[source,python]
+----
+from sklearn.feature_extraction import FeatureHasher
+# ── 2. FeatureHasher expects a list / iterable of {feature_name: value} dicts
+to_hash = (
+    df['body_type']
+      .fillna('missing')          # make sure every key is a str
+      .astype(str)                # in case something weird slipped through
+      .apply(lambda s: {s: 1})
+)
+
+# choose the vector width (power of two is common). 8 buckets   for the demo
+hasher = FeatureHasher(n_features=8, input_type="dict", alternate_sign=True)
+hashed = hasher.transform(to_hash)        # sparse CSR matrix
+
+# ── 3. wrap for readability  ──────────────────────────────────────────
+hashed_df = pd.DataFrame(
+    hashed.toarray().astype(int),          # dense for the print-out
+    columns=[f"h{i}" for i in range(hashed.shape[1])]
+)
+print("hashed representation:\n", hashed_df.head())
 ----
 
 .Explain:

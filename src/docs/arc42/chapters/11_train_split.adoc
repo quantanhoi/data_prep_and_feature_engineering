@@ -1,0 +1,249 @@
+:jbake-title: Train Split
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 11
+:filename: /chapters/11_train_split.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-train-split]]
+== Train Split
+
+=== Syntax
+[source,python]
+----
+# 1. Separate features from target
+y = df['target']                 # <-- change to your label
+X = df.drop(columns='target')
+
+# 2. Train / test split
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+        X, y,
+        test_size   = 0.20,      # 20 % → test set
+        random_state=42,         # fixes the shuffle for reproducibility
+        shuffle     = True,      # set False for strictly time-ordered data
+        stratify    = y          # comment out for regression / time-series
+)
+print(X_train.shape, X_test.shape)
+----
+
+.Pick columns to test
+[source,python]
+----
+cols_to_keep = ['age', 'income', 'zip_code']        # whatever you want
+X = df[cols_to_keep]                                # ONLY these three columns
+y = df['target']
+
+X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.20, random_state=42, shuffle=True, stratify=y
+)
+----
+
+.pick columns by dtype (e.g. only numerics)
+[source,python]
+----
+X = df.select_dtypes(include='number')              # all numeric predictors
+y = df['target']
+
+X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.20, random_state=42, shuffle=True, stratify=y
+)
+----
+
+.drop a bunch you don’t want
+[source,python]
+----
+drop_cols = ['customer_id', 'name']                 # id / text columns to ignore
+X = df.drop(columns=['target', *drop_cols])         # everything except target + drops
+y = df['target']
+# … same train_test_split …
+----
+
+
+=== Cook book without pipeline
+[source,python]
+----
+# ========= 0. READ & VERY LIGHT TIDY =======================================
+import pandas as pd
+import numpy as np
+df = pd.read_csv("raw_file.csv")       # your raw dataset
+# (optional) melt/pivot/groupby here if data are messy ----------------------
+
+# ========= 1. TRAIN / TEST SPLIT  (split first!) ============================
+from sklearn.model_selection import train_test_split
+target_col = "target"                                # <-- change this
+y = df[target_col].copy()
+X = df.drop(columns=target_col).copy()
+
+X_train, X_test, y_train, y_test = train_test_split(
+        X, y,
+        test_size   = 0.20,
+        random_state=42,
+        stratify    = y if y.nunique() < 20 else None   # no stratify for regression
+)
+
+# ========= 2. FEATURE LISTS  ===============================================
+num_cols = X_train.select_dtypes("number").columns.to_list()
+cat_cols = X_train.select_dtypes(exclude="number").columns.to_list()
+
+# ========= 3. MISSING-VALUE IMPUTATION =====================================
+from sklearn.impute import SimpleImputer
+
+num_imp = SimpleImputer(strategy="mean")               # fit only on train
+cat_imp = SimpleImputer(strategy="most_frequent")
+
+X_train[num_cols] = num_imp.fit_transform(X_train[num_cols])
+X_test [num_cols] = num_imp.transform     (X_test [num_cols])
+
+X_train[cat_cols] = cat_imp.fit_transform(X_train[cat_cols])
+X_test [cat_cols] = cat_imp.transform     (X_test [cat_cols])
+
+# ========= 4. OPTIONAL MISSINGNESS FLAGS (structural NA) ====================
+for c in cat_cols:
+    X_train[f"{c}_missing"] = X_train[c].isna().astype(int)
+    X_test [f"{c}_missing"] = X_test [c].isna().astype(int)
+
+# ========= 5. SIMPLE FEATURE CROSS  (must come *before* encoding) ===========
+# Example: cross hour (int 0-23) with day-of-week (Mon…Sun)
+if {"hour","dow"}.issubset(X_train.columns):
+    for split in (X_train, X_test):
+        split["hour_dow"] = split["hour"].astype(str) + "_" + split["dow"].astype(str)
+    cat_cols.append("hour_dow")            # treat it as another categorical feature
+
+# ========= 6. SCALING NUMERICALS  ===========================================
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+X_train[num_cols] = scaler.fit_transform(X_train[num_cols])
+X_test [num_cols] = scaler.transform     (X_test [num_cols])
+
+# ========= 7. ONE-HOT (OR HASH) ENCODING OF CATEGORICALS ====================
+from sklearn.preprocessing import OneHotEncoder
+ohe = OneHotEncoder(handle_unknown="ignore", sparse=False)
+
+X_train_cat = ohe.fit_transform(X_train[cat_cols])
+X_test_cat  = ohe.transform     (X_test [cat_cols])
+
+cat_names = ohe.get_feature_names_out(cat_cols)
+X_train_cat = pd.DataFrame(X_train_cat, columns=cat_names, index=X_train.index)
+X_test_cat  = pd.DataFrame(X_test_cat , columns=cat_names, index=X_test .index)
+
+# drop original cat columns and join encoded -------------------------------
+X_train = pd.concat([X_train.drop(columns=cat_cols), X_train_cat], axis=1)
+X_test  = pd.concat([X_test .drop(columns=cat_cols), X_test_cat ], axis=1)
+
+# ========= 8. FINAL NUMPY MATRICES  =========================================
+X_train_mat = X_train.values.astype(np.float32)
+X_test_mat  = X_test .values.astype(np.float32)
+y_train_arr = y_train.values
+y_test_arr  = y_test .values
+
+print("train shape:", X_train_mat.shape, "test shape:", X_test_mat.shape)
+
+# ========= 9. FIT YOUR MODEL  ==============================================
+from sklearn.ensemble import RandomForestClassifier
+clf = RandomForestClassifier(n_estimators=300, random_state=42)
+clf.fit(X_train_mat, y_train_arr)
+print("test accuracy:", clf.score(X_test_mat, y_test_arr))
+----
+
+
+
+=== Example of training a model
+[source,python]
+----
+import pandas as pd
+df = pd.read_parquet('okcupid_profiles.parquet', engine='fastparquet')
+print(df.head())
+print(df.shape)
+
+print("Unique body types (using .unique()):")
+print(df['body_type'].unique())
+
+print("\nBody type counts (using .value_counts()):")
+print(df['body_type'].value_counts())
+
+print(f"\nTotal number of unique body types: {df['body_type'].nunique()}")
+
+print("\nUnique body types (using set()):")
+print(set(df['body_type'].dropna()))  # dropna() removes NaN values
+
+df_copy = df.copy()
+# ── 1. create a new column with the hashed values
+df_copy
+
+
+from sklearn.feature_extraction import FeatureHasher
+# ── 2. FeatureHasher expects a list / iterable of {feature_name: value} dicts
+to_hash = (
+    df['body_type']
+      .fillna('missing')          # make sure every key is a str
+      .astype(str)                # in case something weird slipped through
+      .apply(lambda s: {s: 1})
+)
+hasher  = FeatureHasher(n_features=8, input_type='dict', alternate_sign=True)
+hashed  = hasher.transform(to_hash)
+
+
+# choose the vector width (power of two is common). 8 buckets   for the demo
+hasher = FeatureHasher(n_features=8, input_type="dict", alternate_sign=True)
+hashed = hasher.transform(to_hash)        # sparse CSR matrix
+
+# ── 3. wrap for readability  ──────────────────────────────────────────
+hashed_df = pd.DataFrame(
+    hashed.toarray().astype(int),          # dense for the print-out
+    columns=[f"h{i}" for i in range(hashed.shape[1])]
+)
+print("hashed representation:\n", hashed_df.head())
+
+
+# Replace df_copy.concat with:
+df_combined = pd.concat([df_copy, hashed_df], axis=1)
+print(df_combined.head())
+
+#--------- drop na rows
+mask       = df_combined['drinks'].notna()        # keeps only real strings
+df_clean   = df_combined[mask].copy()
+
+# -------------split
+y = df_clean['drinks']
+X = df_clean.drop(columns=['drinks'])
+
+
+X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, shuffle=True, stratify=y)
+
+print("Training set shape:", X_train.shape)
+print("Test set shape:", X_test.shape)  
+
+#------------ Train model
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.linear_model import LogisticRegression
+
+# example: one-hot all object-dtype columns, leave numeric columns unchanged
+cat_cols  = X_train.select_dtypes(include="object").columns
+num_cols  = X_train.select_dtypes(exclude="object").columns
+
+pre = ColumnTransformer([
+        ("cat", OneHotEncoder(handle_unknown="ignore"), cat_cols),
+        ("num", "passthrough",                         num_cols)
+])
+
+pipe = Pipeline([
+        ("prep", pre),
+        ("clf",  LogisticRegression(max_iter=10000, random_state=42))
+])
+
+pipe.fit(X_train, y_train)
+y_pred = pipe.predict(X_test)
+
+print("f1_macro :", f1_score(y_test, y_pred, average="macro"))
+
+----

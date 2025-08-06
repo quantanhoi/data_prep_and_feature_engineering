@@ -79,6 +79,7 @@ A REST API (Representational State Transfer API) is a type of API that uses the 
 * Uniform Interface: REST APIs provide a consistent interface for interacting with resources, making them easier to understand and use. 
 
 
+
 ==== Code Walkthrough
 [source, python]
 ----

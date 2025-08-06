@@ -1,0 +1,114 @@
+:jbake-title: Dimension Reduction
+:jbake-type: page_toc
+:jbake-status: published
+:jbake-menu: arc42
+:jbake-order: 09
+:filename: /chapters/09_dimension_reduction.adoc
+ifndef::imagesdir[:imagesdir: ../../images]
+
+:toc:
+
+
+
+[[section-dimension-reduction]]
+== Dimension Reduction
+
+=== What is dimension reduction?           
+A data set with _n_ samples and _m_ features can be viewed as _n_ points in
+ℝ^m.  
+Dimension-reduction techniques build a mapping
+ℝ^m → ℝ^k (with k ≪ m) that keeps the _important_ geometric
+or statistical properties while discarding redundancy and noise.
+
+=== Why do we need it?    
+* Curse of dimensionality – in very high-D space  
+  • almost all volume sits near the boundary,  
+  • pairwise distances concentrate,  
+  • non-parametric models (k-NN, SVM, clustering) break down.  
+* Risk of over-fitting: more features ⇒ more free parameters.  
+* Memory / CPU: training time and model size grow ~ O(m²) for many
+  algorithms.  
+* Humans cannot visualise beyond 3D; reducing to 2-3 PCs exposes structure.
+
+
+=== Two families of solutions
+1. Linear subspace projection  
+   Examples: PCA, Random Projection, LDA.  
+   Assumes the data lie (approximately) on a flat subspace.
+2. Non-linear / manifold learning  
+   Examples: Isomap, LLE, UMAP, t-SNE.  
+   Assumes the data live on a curved manifold embedded in ℝ^m.
+
+=== Cheat-sheet of main algorithms
+[cols="1,2,2,1"]
+|===
+|Technique |Idea in one sentence |When to use |Output dims chosen by
+
+|PCA |Rotate axes so that the first k are the directions of
+largest variance (SVD of covariance). |Fast baseline, denoising,
+decorrelation. |“keep k PCs explaining ≥ 95 % variance”.
+
+|Random Projection |Project onto a random k-dimensional subspace;
+with high probability pairwise distances are preserved
+(Johnson–Lindenstrauss lemma). |Very high-D sparse data where even PCA is
+too slow. |User supplied _k_.
+
+|Kernel PCA |Run PCA in an implicit feature space via kernel trick. |Need non-linear separation but still want
+global variance criterion. |User supplied _k_.
+
+|Isomap |Construct k-NN graph, use geodesic
+distances, embed by classical MDS. |Manifold that is globally
+non-linear but locally Euclidean (e.g. Swiss-roll). |User supplied _k_.
+
+|t-SNE |Place points in 2/3 D so that
+input-space neighbourhood probabilities match low-D Student-t
+probabilities. |Exploratory visualisation / cluster discovery. |Always 2 or 3.
+
+|UMAP |Approximate manifold with fuzzy
+simplicial sets; optimise cross-entropy of two graphs. |Like t-SNE but
+better at global structure, scalable. |User supplied _k_ (often 2).
+
+|===
+
+=== Minimal, leakage-safe PCA in scikit-learn
+[source,python]
+----
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+
+X_train, X_test = train_test_split(X, test_size=0.2, random_state=42)
+
+pipe = Pipeline([
+    ("scale", StandardScaler()),          # centre + unit variance
+    ("pca",   PCA(n_components=0.95))     # keep PCs that explain 95 % var
+])
+X_train_red = pipe.fit_transform(X_train) # fit only on training data
+X_test_red  = pipe.transform(X_test)      # no information leak
+----
+
+
+=== Benefits & trade-offs
++ Faster training, less RAM.  
++ Often improves generalisation by removing noise.  
++ Allows 2-D/3-D visual inspection.  
+– Information loss is inevitable; downstream metrics must be checked.  
+– Some methods (t-SNE) good for plots but useless as model inputs.  
+– Non-linear learners add hyper-parameters (perplexity, neighbours) that
+need tuning.
+
+=== Common mistakes
+* Running PCA or scaler on the full data before the train/test split
+ → information leakage.  
+* Dropping to too few components (under-representation) or too many
+(over-head, little gain) — always inspect explained_variance_ratio_.  
+* Treating t-SNE/UMAP embeddings as metric spaces:
+cluster sizes and inter-cluster distances are _not_ trustworthy.
+
+=== Key take-aways
+1. Start with PCA + standardisation; keep enough PCs for 90-95 % variance.  
+2. Use Random Projection for ultra-high-dimensional sparse text / click-logs.  
+3. Move to manifold methods (Isomap, UMAP, t-SNE) only when the data are
+visibly non-linear _and_ you need exploratory plots.  
+4. Always fit reducers inside a pipeline to avoid train-serve skew.

@@ -1,6 +1,11 @@
 :jbake-title: Feature Cross
-:jbake-type: page_toc
-:jbake-status: published
+:jbake-type: page*Warm-up toy* – quadrant classifier  
+ x₁ sign → A/B, x₂ sign → C/D → cross ⇒ {AC, AD, BC, BD}.  
+ A logistic reg now separates the originally non-linear XOR problem.
+
+*Real data* – Chicago taxi price  
+ hour_of_day (24) × day_of_week (7) ⇒ 168 dummy columns.  
+ "Friday_17" has its own weight, catching rush-hour pricing.jbake-status: published
 :jbake-menu: arc42
 :jbake-order: 8
 :filename: /chapters/08_feature_cross.adoc
@@ -10,6 +15,102 @@ ifndef::imagesdir[:imagesdir: ../../images]
 
 
 
-[[section-design-decisions]]
+[[section-feature-cross]]
 == Feature Cross
 
+=== What is a Feature Cross?
+A *feature cross* is the Cartesian product of two or more **categorical
+or bucketised** features.  
+Every possible combination gets its own binary indicator, so a
+linear model can treat that combination as if it were a standalone
+feature [[13]].
+
+
+=== Why bother crossing features?
+* Adds the non-linearity that plain linear / logistic regression lacks.  
+* Lets simple, cheap models learn complex interactions without
+deep-net overhead.  
+* Keeps interpretability: an active cross literally reads  
+  “Friday_17” or “LatBin = 8 ∧ LonBin = 12”.
+
+
+=== When is the pattern applicable?
+Use it when  
+* both parent features are **categorical or bucketised numerics**,  
+* their interaction is known (or suspected) to influence the target,  
+* cardinality of the product is still manageable (→ hashing if not).
+
+
+=== How it works (mechanics)
+. Optional: *Bucketise* continuous parents first  
+  (e.g. 20 latitude buckets, 20 longitude buckets).  
+. Build strings or integer pairs: `lat_8 + '_' + lon_12`.  
+. One-hot (or hashed) encode that combined token.  
+. Feed the sparse matrix into any linear / tree model.
+
+=== Worked examples
+*Warm-up toy* – quadrant classifier  
+ x₁ sign → A/B, x₂ sign → C/D → cross ⇒ {AC, AD, BC, BD}.  
+ A logistic reg now separates the originally non-linear XOR problem [[13]].
+
+*Real data* – Chicago taxi price  
+ hour_of_day (24) × day_of_week (7) ⇒ 168 dummy columns.  
+ “Friday_17” has its own weight, catching rush-hour pricing [[13]].
+
+=== Benefits & trade-offs
++ Fast training, tiny RAM footprint, transparent coefficients.  
++ Works with off-the-shelf scikit-learn / TensorFlow Wide models.  
+– Produces *very sparse* matrices → use L1/elastic-net regularisation.  
+– Explosion of states if parents have high cardinality → hash trick or
+ embeddings.  
+– Redundant if parents are strongly correlated.
+
+
+=== Minimal Python snippet
+[source,python]
+----
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose    import ColumnTransformer
+from sklearn.linear_model import LogisticRegression
+import pandas as pd
+
+# make the cross -------------------------------------------------
+df = raw.copy()
+df['hour_dow'] = df['hour'].astype(str) + '_' + df['dow'].astype(str)
+
+X = df[['hour', 'dow', 'hour_dow']]   # keep or drop parents as you like
+y = df['target']
+
+pre = ColumnTransformer([
+        ('ohe', OneHotEncoder(handle_unknown='ignore'), ['hour_dow'])
+    ], remainder='drop')               # only the cross is encoded
+
+model = Pipeline([('prep', pre),
+                  ('clf',  LogisticRegression(max_iter=1000,
+                                             penalty='l1', solver='liblinear'))])
+model.fit(X, y)
+----
+
+
+=== Variants & extensions
+* *Multiple crosses* – chain more than two parents.  
+* *Hash crossing* – `FeatureHasher(n_features=2**18)` to cap width.  
+* *Wide-and-Deep* – cross features in a *wide* branch, raw inputs in a
+ deep branch; train jointly.
+
+
+=== Common mistakes to avoid
+* Crossing raw continuous values → astronomic state space. Always bucket
+ first.  
+* Creating crosses *before* the train/test split → leakage. Build them
+ inside a pipeline transformer.  
+* Ignoring sparsity → forget to regularise; model memorises noise.
+
+
+=== Key take-aways
+1. Crosses give cheap linear models the power of polynomial features.  
+2. Bucketise, then cross; otherwise cardinality explodes.  
+3. Fit and one-hot inside a pipeline to avoid leakage and keep
+ train-serve parity.  
+4. Regularise heavily; most cross columns will be useless noise.
