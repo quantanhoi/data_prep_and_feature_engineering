@@ -16,10 +16,21 @@ print("Generating dataset with intentional leakage issues...")
 housing = fetch_california_housing(as_frame=True)
 df = housing.frame
 
-# Rename the target for clarity
-df = df.rename(columns={'MedHouseVal': 'median_house_value'})
+# Rename columns to use snake_case
+df = df.rename(columns={
+    'MedInc': 'median_income',
+    'HouseAge': 'housing_median_age',
+    'AveRooms': 'total_rooms',
+    'AveBedrms': 'total_bedrooms',
+    'Population': 'population',
+    'AveOccup': 'households',
+    'Latitude': 'latitude',
+    'Longitude': 'longitude',
+    'MedHouseVal': 'median_house_value'
+})
 
 print(f"Original dataset shape: {df.shape}")
+print(f"Columns: {list(df.columns)}")
 
 # Create binary target: high_value (1) if house value > median, else 0
 threshold = df['median_house_value'].median()
