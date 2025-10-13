@@ -1,0 +1,70 @@
+{
+  "students": [
+    {
+      "student_id": "S001",
+      "name": "John Doe",
+      "major": "Computer Science",
+      "courses": [
+        {
+          "course_code": "CS101",
+          "course_name": "Intro to Programming",
+          "grade": "A"
+        },
+        {
+          "course_code": "CS102",
+          "course_name": "Data Structures",
+          "grade": "B+"
+        },
+        {
+          "course_code": "MATH201",
+          "course_name": "Calculus II",
+          "grade": "A-"
+        }
+      ]
+    },
+    {
+      "student_id": "S002",
+      "name": "Jane Smith",
+      "major": "Mathematics",
+      "courses": [
+        {
+          "course_code": "MATH201",
+          "course_name": "Calculus II",
+          "grade": "A"
+        },
+        {
+          "course_code": "MATH301",
+          "course_name": "Linear Algebra",
+          "grade": "A+"
+        }
+      ]
+    },
+    {
+      "student_id": "S003",
+      "name": "Mike Johnson",
+      "major": "Physics",
+      "courses": [
+        {
+          "course_code": "PHYS101",
+          "course_name": "Mechanics",
+          "grade": "B"
+        },
+        {
+          "course_code": "PHYS201",
+          "course_name": "Electromagnetism",
+          "grade": "B+"
+        },
+        {
+          "course_code": "MATH201",
+          "course_name": "Calculus II",
+          "grade": "B+"
+        },
+        {
+          "course_code": "CS101",
+          "course_name": "Intro to Programming",
+          "grade": "A"
+        }
+      ]
+    }
+  ]
+}
