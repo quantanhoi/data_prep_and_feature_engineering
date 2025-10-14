@@ -1,0 +1,43 @@
+{
+  "movies": [
+    {
+      "movie_id": "M001",
+      "title": "One Piece: Red",
+      "genre": "Anime",
+      "year": 2022,
+      "director": "Goro Taniguchi",
+      "cast": [
+        "Luffy",
+        "Sanji",
+        "Nico Robin"
+      ]
+    },
+    {
+      "movie_id": "M002",
+      "title": "Naruto: The Last",
+      "genre": "Anime",
+      "year": 2014,
+      "director": "Tsuneo Kobayashi",
+      "cast": [
+        "Naruto Uzumaki",
+        "Hinata Hyuga",
+        "Sakura Haruno",
+        "Sasuke Uchiha"
+      ]
+    },
+    {
+      "movie_id": "M003",
+      "title": "Dragon Ball Super: Broly",
+      "genre": "Anime",
+      "year": 2018,
+      "director": "Tatsuya Nagamine",
+      "cast": [
+        "Goku",
+        "Vegeta",
+        "Broly",
+        "Frieza",
+        "Whis"
+      ]
+    }
+  ]
+}
