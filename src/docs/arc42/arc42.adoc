@@ -93,7 +93,7 @@ include::chapters/11_train_split.adoc[]
 
 // <<<<
 // // 12. Glossary
-// include::chapters/12_glossary.adoc[]
+include::chapters/12_model_diagnostic.adoc[]
 
 
 //include::chapters/13_tensorflow_horse_truck.adoc[]
