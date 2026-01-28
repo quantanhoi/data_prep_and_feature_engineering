@@ -15,3 +15,10 @@ dtcw
 
 DS_Store
 src/scaling_numerical/yelp_academic_dataset_business.json
+
+# Google Cloud credentials - NEVER commit these files
+*.json
+!pyproject.toml
+!poetry.lock
+*credentials*.json
+*service-account*.json
